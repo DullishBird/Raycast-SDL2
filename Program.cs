@@ -82,6 +82,51 @@ while (running)
 
     SDL.SDL_RenderDrawPoint(renderer, 20, 20);
 
+    SDL.SDL_GetMouseState(out int x, out int y);
+
+    // Console.WriteLine(string.Format("x {0}, y {1}", x, y)); 
+
+    
+    SDL.SDL_Vertex[] array = new SDL.SDL_Vertex[4];
+
+    array[0].position.x = x - 25;
+    array[0].position.y = y - 25;
+    array[0].color.r = 255;
+    array[0].color.g = 0;
+    array[0].color.b = 0;
+    array[0].color.a = 255;
+
+    array[1].position.x = x + 25;
+    array[1].position.y =  y - 25;
+    array[1].color.r = 0;
+    array[1].color.g = 255;
+    array[1].color.b = 0;
+    array[1].color.a = 255;
+
+    array[2].position.x = x + 25;
+    array[2].position.y = y + 25;
+    array[2].color.r = 0;
+    array[2].color.g = 0;
+    array[2].color.b = 255;
+    array[2].color.a = 255;
+
+    array[3].position.x = x - 25;
+    array[3].position.y =  y + 25;
+    array[3].color.r = 0;
+    array[3].color.g = 255;
+    array[3].color.b = 0;
+    array[3].color.a = 255;
+
+    int[] indices = { 0, 1, 2, 0, 3, 2};
+
+    // array[3].position.x = x - 25;
+    // array[3].position.y = y + 25;
+    // array[3].color.r = 0;
+    // array[3].color.g = 0;
+    // array[3].color.b = 255;
+    // array[3].color.a = 255;
+
+    SDL.SDL_RenderGeometry(renderer, IntPtr.Zero, array, array.Count(), indices, indices.Count());
     // Switches out the currently presented render surface with the one we just did work on.
     SDL.SDL_RenderPresent(renderer);
 }
