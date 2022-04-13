@@ -9,8 +9,10 @@ if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO) < 0)
 }
 
 // Create a new window given a title, size, and passes it a flag indicating it should be shown.
+int windowHeight = 480;
+int windowWidth = 640;
 var window = SDL.SDL_CreateWindow("SDL .NET 6 Tutorial", SDL.SDL_WINDOWPOS_UNDEFINED, SDL.SDL_WINDOWPOS_UNDEFINED,
-                                640, 480, SDL.SDL_WindowFlags.SDL_WINDOW_SHOWN);
+                                windowWidth, windowHeight, SDL.SDL_WindowFlags.SDL_WINDOW_SHOWN);
 
 if (window == IntPtr.Zero)
 {
@@ -35,6 +37,23 @@ if (SDL_image.IMG_Init(SDL_image.IMG_InitFlags.IMG_INIT_PNG) == 0)
 }
 
 var running = true;
+
+//Creating varibles for SDL.SDL_Point[]
+
+int pointNum = 0;
+
+SDL.SDL_Point[] points = new SDL.SDL_Point[windowWidth * 2];
+
+//Filling SDL.SDL_Point[] with coordinates
+for (int x = 0; x < windowWidth; x++)
+{
+    points[pointNum].x = x;
+    points[pointNum].y = windowHeight - (windowHeight / 4) * 3;
+    points[pointNum + 1].x = x;
+    points[pointNum + 1].y = windowHeight - windowHeight / 4;
+
+    pointNum += 2;
+}
 
 // Main loop for the program
 while (running)
@@ -76,17 +95,21 @@ while (running)
 
     SDL.SDL_SetRenderDrawColor(renderer, 255, 150, 10, 255);
 
+    // Render an square
     SDL.SDL_RenderFillRect(renderer, ref rect);
     
     SDL.SDL_SetRenderDrawColor(renderer, 0, 11, 250, 255);
 
+    // Render a dot
     SDL.SDL_RenderDrawPoint(renderer, 20, 20);
 
+    // Getting mouse xy coordinates
     SDL.SDL_GetMouseState(out int x, out int y);
-
     // Console.WriteLine(string.Format("x {0}, y {1}", x, y)); 
 
-    
+    // Render block of lines
+    SDL.SDL_RenderDrawLines(renderer, points, windowWidth * 2);
+
     SDL.SDL_Vertex[] array = new SDL.SDL_Vertex[4];
 
     array[0].position.x = x - 25;
@@ -117,18 +140,15 @@ while (running)
     array[3].color.b = 0;
     array[3].color.a = 255;
 
-    int[] indices = { 0, 1, 2, 0, 3, 2};
+    int[] indices = { 0, 1, 2, 0, 3, 2 };
 
-    // array[3].position.x = x - 25;
-    // array[3].position.y = y + 25;
-    // array[3].color.r = 0;
-    // array[3].color.g = 0;
-    // array[3].color.b = 255;
-    // array[3].color.a = 255;
-
+    // Render a square out of 2 triangles
     SDL.SDL_RenderGeometry(renderer, IntPtr.Zero, array, array.Count(), indices, indices.Count());
+
     // Switches out the currently presented render surface with the one we just did work on.
     SDL.SDL_RenderPresent(renderer);
+    
+    
 }
 
 // Clean up the resources that were created.
