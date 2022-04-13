@@ -9,8 +9,10 @@ if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO) < 0)
 }
 
 // Create a new window given a title, size, and passes it a flag indicating it should be shown.
+int windowHeight = 480;
+int windowWidth = 640;
 var window = SDL.SDL_CreateWindow("SDL .NET 6 Tutorial", SDL.SDL_WINDOWPOS_UNDEFINED, SDL.SDL_WINDOWPOS_UNDEFINED,
-                                640, 480, SDL.SDL_WindowFlags.SDL_WINDOW_SHOWN);
+                                windowWidth, windowHeight, SDL.SDL_WindowFlags.SDL_WINDOW_SHOWN);
 
 if (window == IntPtr.Zero)
 {
@@ -37,25 +39,20 @@ if (SDL_image.IMG_Init(SDL_image.IMG_InitFlags.IMG_INIT_PNG) == 0)
 var running = true;
 
 //Creating varibles for SDL.SDL_Point[]
-int xCount = 0;
 
-int pointCount = 1282;
+int pointNum = 0;
 
-int position = 0;
-
-SDL.SDL_Point[] points = new SDL.SDL_Point[pointCount];
+SDL.SDL_Point[] points = new SDL.SDL_Point[windowWidth * 2];
 
 //Filling SDL.SDL_Point[] with coordinates
-while (xCount <= 640)
+for (int x = 0; x < windowWidth; x++)
 {
-    points[position].x = xCount;
-    points[position].y = 120;
-    points[position + 1].x = xCount;
-    points[position + 1].y = 360;
-    
-    position += 2;
-    
-    xCount++;
+    points[pointNum].x = x;
+    points[pointNum].y = windowHeight - (windowHeight / 4) * 3;
+    points[pointNum + 1].x = x;
+    points[pointNum + 1].y = windowHeight - windowHeight / 4;
+
+    pointNum += 2;
 }
 
 // Main loop for the program
@@ -111,7 +108,7 @@ while (running)
     // Console.WriteLine(string.Format("x {0}, y {1}", x, y)); 
 
     // Render block of lines
-    SDL.SDL_RenderDrawLines(renderer, points, pointCount);
+    SDL.SDL_RenderDrawLines(renderer, points, windowWidth * 2);
 
     SDL.SDL_Vertex[] array = new SDL.SDL_Vertex[4];
 
