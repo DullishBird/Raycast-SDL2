@@ -36,6 +36,28 @@ if (SDL_image.IMG_Init(SDL_image.IMG_InitFlags.IMG_INIT_PNG) == 0)
 
 var running = true;
 
+//Creating varibles for SDL.SDL_Point[]
+int xCount = 0;
+
+int pointCount = 1282;
+
+int position = 0;
+
+SDL.SDL_Point[] points = new SDL.SDL_Point[pointCount];
+
+//Filling SDL.SDL_Point[] with coordinates
+while (xCount <= 640)
+{
+    points[position].x = xCount;
+    points[position].y = 120;
+    points[position + 1].x = xCount;
+    points[position + 1].y = 360;
+    
+    position += 2;
+    
+    xCount++;
+}
+
 // Main loop for the program
 while (running)
 {
@@ -76,17 +98,21 @@ while (running)
 
     SDL.SDL_SetRenderDrawColor(renderer, 255, 150, 10, 255);
 
+    // Render an square
     SDL.SDL_RenderFillRect(renderer, ref rect);
     
     SDL.SDL_SetRenderDrawColor(renderer, 0, 11, 250, 255);
 
+    // Render a dot
     SDL.SDL_RenderDrawPoint(renderer, 20, 20);
 
+    // Getting mouse xy coordinates
     SDL.SDL_GetMouseState(out int x, out int y);
-
     // Console.WriteLine(string.Format("x {0}, y {1}", x, y)); 
 
-    
+    // Render block of lines
+    SDL.SDL_RenderDrawLines(renderer, points, pointCount);
+
     SDL.SDL_Vertex[] array = new SDL.SDL_Vertex[4];
 
     array[0].position.x = x - 25;
@@ -117,18 +143,15 @@ while (running)
     array[3].color.b = 0;
     array[3].color.a = 255;
 
-    int[] indices = { 0, 1, 2, 0, 3, 2};
+    int[] indices = { 0, 1, 2, 0, 3, 2 };
 
-    // array[3].position.x = x - 25;
-    // array[3].position.y = y + 25;
-    // array[3].color.r = 0;
-    // array[3].color.g = 0;
-    // array[3].color.b = 255;
-    // array[3].color.a = 255;
-
+    // Render a square out of 2 triangles
     SDL.SDL_RenderGeometry(renderer, IntPtr.Zero, array, array.Count(), indices, indices.Count());
+
     // Switches out the currently presented render surface with the one we just did work on.
     SDL.SDL_RenderPresent(renderer);
+    
+    
 }
 
 // Clean up the resources that were created.
