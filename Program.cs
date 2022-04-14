@@ -20,9 +20,9 @@ if (window == IntPtr.Zero)
 }
 
 // Creates a new SDL hardware renderer using the default graphics device with VSYNC enabled.
-var renderer = SDL.SDL_CreateRenderer(window, 
-                                        -1, 
-                                        SDL.SDL_RendererFlags.SDL_RENDERER_ACCELERATED | 
+var renderer = SDL.SDL_CreateRenderer(window,
+                                        -1,
+                                        SDL.SDL_RendererFlags.SDL_RENDERER_ACCELERATED |
                                         SDL.SDL_RendererFlags.SDL_RENDERER_PRESENTVSYNC);
 
 if (renderer == IntPtr.Zero)
@@ -55,6 +55,8 @@ for (int x = 0; x < windowWidth; x++)
     pointNum += 2;
 }
 
+List<SDL.SDL_Point> lastPosition = new List<SDL.SDL_Point>();
+bool mouseState = false;
 // Main loop for the program
 while (running)
 {
@@ -66,7 +68,33 @@ while (running)
             case SDL.SDL_EventType.SDL_QUIT:
                 running = false;
                 break;
+
+            case SDL.SDL_EventType.SDL_MOUSEBUTTONDOWN:
+                if (e.button.button == SDL.SDL_BUTTON_LEFT)
+                {
+                    mouseState = true;
+                }
+                break;
+
+            case SDL.SDL_EventType.SDL_MOUSEBUTTONUP:
+                if (e.button.button == SDL.SDL_BUTTON_LEFT)
+                {
+                    mouseState = false;
+                }
+                break;
+
+            case SDL.SDL_EventType.SDL_KEYDOWN:
+                if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_c) 
+                {
+                    lastPosition.Clear();
+                }
+                break;
         }
+    }
+    if (mouseState)
+    {
+        SDL.SDL_GetMouseState(out int x_, out int y_);
+        lastPosition.Add(new SDL.SDL_Point() { x = x_, y = y_ });
     }
 
     // Sets the color that the screen will be cleared with.
@@ -90,14 +118,14 @@ while (running)
         x = 300,
         y = 100,
         w = 50,
-        h = 50  
+        h = 50
     };
 
     SDL.SDL_SetRenderDrawColor(renderer, 255, 150, 10, 255);
 
     // Render an square
     SDL.SDL_RenderFillRect(renderer, ref rect);
-    
+
     SDL.SDL_SetRenderDrawColor(renderer, 0, 11, 250, 255);
 
     // Render a dot
@@ -108,50 +136,86 @@ while (running)
     // Console.WriteLine(string.Format("x {0}, y {1}", x, y)); 
 
     // Render block of lines
-    SDL.SDL_RenderDrawLines(renderer, points, windowWidth * 2);
+    SDL.SDL_RenderDrawLines(renderer, points, points.Count());
 
-    SDL.SDL_Vertex[] array = new SDL.SDL_Vertex[4];
+    
+    foreach (var pos in lastPosition)
+    {
+        Rect savedRect = new Rect(50, 50);
+        savedRect.SetPosition(pos.x, pos.y);
+        savedRect.Draw(renderer);
+    }
 
-    array[0].position.x = x - 25;
-    array[0].position.y = y - 25;
-    array[0].color.r = 255;
-    array[0].color.g = 0;
-    array[0].color.b = 0;
-    array[0].color.a = 255;
-
-    array[1].position.x = x + 25;
-    array[1].position.y =  y - 25;
-    array[1].color.r = 0;
-    array[1].color.g = 255;
-    array[1].color.b = 0;
-    array[1].color.a = 255;
-
-    array[2].position.x = x + 25;
-    array[2].position.y = y + 25;
-    array[2].color.r = 0;
-    array[2].color.g = 0;
-    array[2].color.b = 255;
-    array[2].color.a = 255;
-
-    array[3].position.x = x - 25;
-    array[3].position.y =  y + 25;
-    array[3].color.r = 0;
-    array[3].color.g = 255;
-    array[3].color.b = 0;
-    array[3].color.a = 255;
-
-    int[] indices = { 0, 1, 2, 0, 3, 2 };
-
-    // Render a square out of 2 triangles
-    SDL.SDL_RenderGeometry(renderer, IntPtr.Zero, array, array.Count(), indices, indices.Count());
+    Rect drawRect = new Rect(50, 50);
+    drawRect.SetPosition(x, y);
+    drawRect.Draw(renderer);
+      
 
     // Switches out the currently presented render surface with the one we just did work on.
     SDL.SDL_RenderPresent(renderer);
-    
-    
+
+
 }
 
 // Clean up the resources that were created.
 SDL.SDL_DestroyRenderer(renderer);
 SDL.SDL_DestroyWindow(window);
 SDL.SDL_Quit();
+
+class Rect
+{
+    public SDL.SDL_Vertex[] Vertices;
+    public int[] Indices;
+
+    public Rect(int Width, int Height)
+    {
+        Vertices = new SDL.SDL_Vertex[4];
+        Indices = new int[] { 0, 1, 2, 0, 3, 2 };
+
+        int halfWight = Width / 2;
+        int halfHight = Height / 2;
+
+        Vertices[0].position.x = -halfWight;
+        Vertices[0].position.y = -halfHight;
+        Vertices[0].color.r = 255;
+        Vertices[0].color.g = 0;
+        Vertices[0].color.b = 0;
+        Vertices[0].color.a = 255;
+
+        Vertices[1].position.x = halfWight;
+        Vertices[1].position.y = -halfHight;
+        Vertices[1].color.r = 0;
+        Vertices[1].color.g = 255;
+        Vertices[1].color.b = 0;
+        Vertices[1].color.a = 255;
+
+        Vertices[2].position.x = halfWight;
+        Vertices[2].position.y = halfHight;
+        Vertices[2].color.r = 0;
+        Vertices[2].color.g = 0;
+        Vertices[2].color.b = 255;
+        Vertices[2].color.a = 255;
+
+        Vertices[3].position.x = -halfWight;
+        Vertices[3].position.y = halfHight;
+        Vertices[3].color.r = 0;
+        Vertices[3].color.g = 255;
+        Vertices[3].color.b = 0;
+        Vertices[3].color.a = 255;
+    }
+
+    // Render a square out of 2 triangles
+    public void Draw(IntPtr renderer)
+    {
+        SDL.SDL_RenderGeometry(renderer, IntPtr.Zero, Vertices, Vertices.Count(), Indices, Indices.Count());
+    }
+
+    public void SetPosition(int x, int y)
+    {
+        for (int i = 0; i < Vertices.Length; i++)
+        {
+            Vertices[i].position.x += x;
+            Vertices[i].position.y += y;
+        }
+    }
+}
