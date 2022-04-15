@@ -8,10 +8,7 @@ if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO) < 0)
     Console.WriteLine($"There was an issue initilizing SDL. {SDL.SDL_GetError()}");
 }
 
-int windowHeight = 480;
-int windowWidth = 640;
-
-RaycastEngine.Window window = new RaycastEngine.Window("SDL .NET 6 Tutorial", windowWidth, windowHeight);
+RaycastEngine.Window window = new RaycastEngine.Window("SDL .NET 6 Tutorial", 640, 480);
 
 window.Titile = "Test";
 
@@ -21,25 +18,28 @@ if (SDL_image.IMG_Init(SDL_image.IMG_InitFlags.IMG_INIT_PNG) == 0)
     Console.WriteLine($"There was an issue initilizing SDL2_Image {SDL_image.IMG_GetError()}");
 }
 
+var renderer = window.GetRenderer();
+
 var running = true;
 
 //Creating varibles for SDL.SDL_Point[]
 
 int pointNum = 0;
 
-SDL.SDL_Point[] points = new SDL.SDL_Point[windowWidth * 2];
+SDL.SDL_Point[] points = new SDL.SDL_Point[window.GetWight() * 2];
 
 //Filling SDL.SDL_Point[] with coordinates
-for (int x = 0; x < windowWidth; x++)
+for (int x = 0; x < window.GetWight(); x++)
 {
     points[pointNum].x = x;
-    points[pointNum].y = windowHeight - (windowHeight / 4) * 3;
+    points[pointNum].y = window.GetHeight() - (window.GetHeight() / 4) * 3;
     points[pointNum + 1].x = x;
-    points[pointNum + 1].y = windowHeight - windowHeight / 4;
+    points[pointNum + 1].y = window.GetHeight() - window.GetHeight() / 4;
 
     pointNum += 2;
 }
 
+//Creating list for saving position where "click" was
 List<SDL.SDL_Point> lastPosition = new List<SDL.SDL_Point>();
 
 bool mouseState = false;
@@ -85,20 +85,20 @@ while (running)
     }
 
     // Sets the color that the screen will be cleared with.
-    if (SDL.SDL_SetRenderDrawColor(window.GetRenderer(), 135, 206, 235, 255) < 0)
+    if (SDL.SDL_SetRenderDrawColor(renderer, 135, 206, 235, 255) < 0)
     {
         Console.WriteLine($"There was an issue with setting the render draw color. {SDL.SDL_GetError()}");
     }
 
     // Clears the current render surface.
-    if (SDL.SDL_RenderClear(window.GetRenderer()) < 0)
+    if (SDL.SDL_RenderClear(renderer) < 0)
     {
         Console.WriteLine($"There was an issue with clearing the render surface. {SDL.SDL_GetError()}");
     }
 
-    SDL.SDL_SetRenderDrawColor(window.GetRenderer(), 255, 0, 0, 255);
+    SDL.SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
 
-    SDL.SDL_RenderDrawLine(window.GetRenderer(), 0, 0, 640, 480);
+    SDL.SDL_RenderDrawLine(renderer, 0, 0, 640, 480);
 
     var rect = new SDL.SDL_Rect
     {
@@ -108,45 +108,45 @@ while (running)
         h = 50
     };
 
-    SDL.SDL_SetRenderDrawColor(window.GetRenderer(), 255, 150, 10, 255);
+    SDL.SDL_SetRenderDrawColor(renderer, 255, 150, 10, 255);
 
     // Render an square
-    SDL.SDL_RenderFillRect(window.GetRenderer(), ref rect);
+    SDL.SDL_RenderFillRect(renderer, ref rect);
 
-    SDL.SDL_SetRenderDrawColor(window.GetRenderer(), 0, 11, 250, 255);
+    SDL.SDL_SetRenderDrawColor(renderer, 0, 11, 250, 255);
 
     // Render a dot
-    SDL.SDL_RenderDrawPoint(window.GetRenderer(), 20, 20);
+    SDL.SDL_RenderDrawPoint(renderer, 20, 20);
 
     // Getting mouse xy coordinates
     SDL.SDL_GetMouseState(out int x, out int y);
     // Console.WriteLine(string.Format("x {0}, y {1}", x, y)); 
 
     // Render block of lines
-    SDL.SDL_RenderDrawLines(window.GetRenderer(), points, points.Count());
+    SDL.SDL_RenderDrawLines(renderer, points, points.Count());
 
     
     foreach (var pos in lastPosition)
     {
         Rect savedRect = new Rect(50, 50);
         savedRect.SetPosition(pos.x, pos.y);
-        savedRect.Draw(window.GetRenderer());
+        savedRect.Draw(renderer);
     }
 
     Rect drawRect = new Rect(50, 50);
     drawRect.SetPosition(x, y);
-    drawRect.Draw(window.GetRenderer());
+    drawRect.Draw(renderer);
       
 
     // Switches out the currently presented render surface with the one we just did work on.
-    SDL.SDL_RenderPresent(window.GetRenderer());
+    SDL.SDL_RenderPresent(renderer);
 
 
 }
 
 // Clean up the resources that were created.
-SDL.SDL_DestroyRenderer(window.GetRenderer());
-SDL.SDL_DestroyWindow(window.GetNative());
+SDL.SDL_DestroyRenderer(renderer);
+SDL.SDL_DestroyWindow(renderer);
 SDL.SDL_Quit();
 
 class Rect
