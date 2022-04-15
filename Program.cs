@@ -2,33 +2,15 @@
 using System;
 using SDL2;
 
-// Initilizes SDL.
+//Initilizes SDL._Init
 if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO) < 0)
 {
     Console.WriteLine($"There was an issue initilizing SDL. {SDL.SDL_GetError()}");
 }
 
-// Create a new window given a title, size, and passes it a flag indicating it should be shown.
-int windowHeight = 480;
-int windowWidth = 640;
-var window = SDL.SDL_CreateWindow("SDL .NET 6 Tutorial", SDL.SDL_WINDOWPOS_UNDEFINED, SDL.SDL_WINDOWPOS_UNDEFINED,
-                                windowWidth, windowHeight, SDL.SDL_WindowFlags.SDL_WINDOW_SHOWN);
+RaycastEngine.Window window = new RaycastEngine.Window("SDL .NET 6 Tutorial", 640, 480);
 
-if (window == IntPtr.Zero)
-{
-    Console.WriteLine($"There was an issue creating the window. {SDL.SDL_GetError()}");
-}
-
-// Creates a new SDL hardware renderer using the default graphics device with VSYNC enabled.
-var renderer = SDL.SDL_CreateRenderer(window,
-                                        -1,
-                                        SDL.SDL_RendererFlags.SDL_RENDERER_ACCELERATED |
-                                        SDL.SDL_RendererFlags.SDL_RENDERER_PRESENTVSYNC);
-
-if (renderer == IntPtr.Zero)
-{
-    Console.WriteLine($"There was an issue creating the renderer. {SDL.SDL_GetError()}");
-}
+window.Titile = "Test";
 
 // Initilizes SDL_image for use with png files.
 if (SDL_image.IMG_Init(SDL_image.IMG_InitFlags.IMG_INIT_PNG) == 0)
@@ -36,27 +18,32 @@ if (SDL_image.IMG_Init(SDL_image.IMG_InitFlags.IMG_INIT_PNG) == 0)
     Console.WriteLine($"There was an issue initilizing SDL2_Image {SDL_image.IMG_GetError()}");
 }
 
+var renderer = window.GetRenderer();
+
 var running = true;
 
 //Creating varibles for SDL.SDL_Point[]
 
 int pointNum = 0;
 
-SDL.SDL_Point[] points = new SDL.SDL_Point[windowWidth * 2];
+SDL.SDL_Point[] points = new SDL.SDL_Point[window.GetWight() * 2];
 
 //Filling SDL.SDL_Point[] with coordinates
-for (int x = 0; x < windowWidth; x++)
+for (int x = 0; x < window.GetWight(); x++)
 {
     points[pointNum].x = x;
-    points[pointNum].y = windowHeight - (windowHeight / 4) * 3;
+    points[pointNum].y = window.GetHeight() - (window.GetHeight() / 4) * 3;
     points[pointNum + 1].x = x;
-    points[pointNum + 1].y = windowHeight - windowHeight / 4;
+    points[pointNum + 1].y = window.GetHeight() - window.GetHeight() / 4;
 
     pointNum += 2;
 }
 
+//Creating list for saving position where "click" was
 List<SDL.SDL_Point> lastPosition = new List<SDL.SDL_Point>();
+
 bool mouseState = false;
+
 // Main loop for the program
 while (running)
 {
@@ -159,7 +146,7 @@ while (running)
 
 // Clean up the resources that were created.
 SDL.SDL_DestroyRenderer(renderer);
-SDL.SDL_DestroyWindow(window);
+SDL.SDL_DestroyWindow(renderer);
 SDL.SDL_Quit();
 
 class Rect
@@ -169,7 +156,7 @@ class Rect
 
     public Rect(int Width, int Height)
     {
-        Vertices = new SDL.SDL_Vertex[4];
+        Vertices = new SDL.SDL_Vertex[4];           //Should be lowercase
         Indices = new int[] { 0, 1, 2, 0, 3, 2 };
 
         int halfWight = Width / 2;
