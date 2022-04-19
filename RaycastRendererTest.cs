@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using SDL2;
 
+
 namespace RaycastEngine
 {
     public class RaycastRendererTest
@@ -48,9 +49,17 @@ namespace RaycastEngine
             double dirX = -1, dirY = 0; //initial direction vector
             double planeX = 0, planeY = 0.66; //the 2d raycaster version of camera plane
 
+            double time = 0; //time of current frame
+            double oldTime = 0; //time of previous frame
+            
             if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO) < 0)
             {
                 Console.WriteLine($"There was an issue initilizing SDL. {SDL.SDL_GetError()}");
+            }
+
+            if (SDL_ttf.TTF_Init() < 0)
+            {
+                Console.WriteLine($"There was an issue initilizing SDL_ttf. {SDL_ttf.TTF_GetError()}");
             }
 
             RaycastEngine.Window window = new RaycastEngine.Window("SDL .NET 6 Tutorial", 640, 480);
@@ -64,8 +73,13 @@ namespace RaycastEngine
             var windowWight = window.GetWight();
             var windowHeight = window.GetHeight();
 
-            double moveSpeed = 1.0; //the constant value is in squares/second
-            double rotSpeed = 0.1; //the constant value is in radians/second
+            //timing for input and FPS counter
+            oldTime = time;
+            time = SDL.SDL_GetTicks();
+            double frameTime = (time - oldTime) / 1000.0; //frameTime is the time this frame has taken, in seconds
+            
+            double moveSpeed =  frameTime * 5.0; //the constant value is in squares/second
+            double rotSpeed =  frameTime * 3.0; //the constant value is in radians/second
 
             while (running)
             {
@@ -207,27 +221,53 @@ namespace RaycastEngine
 
                     //choose wall color
                     SDL.SDL_Color color;
-                    switch (worldMap[mapX,mapY])
+                    switch (worldMap[mapX, mapY])
                     {
-                        case 1: color = new SDL.SDL_Color { r = 255, g = 0, b = 0, a = 255}; break; //red
+                        case 1: color = new SDL.SDL_Color { r = 255, g = 0, b = 0, a = 255 }; break; //red
                         case 2: color = new SDL.SDL_Color { r = 0, g = 255, b = 0, a = 255 }; break; //green
                         case 3: color = new SDL.SDL_Color { r = 0, g = 0, b = 255, a = 255 }; break; //blue
                         case 4: color = new SDL.SDL_Color { r = 255, g = 255, b = 255, a = 255 }; break; //white
                         default: color = new SDL.SDL_Color { r = 255, g = 255, b = 0, a = 255 }; break; //yellow
                     }
-
-                    //give x and y sides different brightness
-                    //if (side == 1) { color = color / 2; }
+                                      
+                    if (side == 1) 
+                    {
+                        color.r /= (byte)2;
+                        color.g /= (byte)2;
+                        color.b /= (byte)2;
+                    }
 
                     //draw the pixels of the stripe as a vertical line
                     SDL.SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
                     SDL.SDL_RenderDrawLine(renderer, x, drawStart, x, drawEnd);
                 }
+
+                oldTime = time;
+                time = SDL.SDL_GetTicks();
+                double frameTimee = (time - oldTime) / 1000.0; //frameTime is the time this frame has taken, in seconds
+                SDL.SDL_Color textColor = new SDL.SDL_Color { r = 255, g = 255, b = 255, a = 255 };
+                var font = SDL_ttf.TTF_OpenFont("C:/Windows/Fonts/Arial.ttf", 20);
+                string fpsCounterText = (Math.Round(1.0 / frameTimee)).ToString();
+                
+                IntPtr message = SDL.SDL_CreateTextureFromSurface(renderer, SDL_ttf.TTF_RenderText_Solid(font, fpsCounterText, textColor));
+                //Console.WriteLine(1.0 / frameTimee); //FPS counter
+
+                var rect = new SDL.SDL_Rect
+                {
+                    x = 0,
+                    y = 0,
+                    w = 20,
+                    h = 20
+                };
+
+                SDL.SDL_RenderCopy(renderer, message, ref rect, ref rect);
+                
                 // Switches out the currently presented render surface with the one we just did work on.
                 SDL.SDL_RenderPresent(renderer);
-
+                SDL.SDL_DestroyTexture(message);
             }
             // Clean up the resources that were created.
+            
             SDL.SDL_DestroyRenderer(renderer);
             SDL.SDL_DestroyWindow(renderer);
             SDL.SDL_Quit();
