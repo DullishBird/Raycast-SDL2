@@ -221,30 +221,22 @@ namespace RaycastEngine
 
                     //choose wall color
                     SDL.SDL_Color color;
-                    
-                    if (side == 1)
+                    switch (worldMap[mapX, mapY])
                     {
-                        switch (worldMap[mapX, mapY])
-                        {
-                            case 1: color = new SDL.SDL_Color { r = 255, g = 0, b = 0, a = 255 }; break; //red
-                            case 2: color = new SDL.SDL_Color { r = 0, g = 255, b = 0, a = 255 }; break; //green
-                            case 3: color = new SDL.SDL_Color { r = 0, g = 0, b = 255, a = 255 }; break; //blue
-                            case 4: color = new SDL.SDL_Color { r = 255, g = 255, b = 255, a = 255 }; break; //white
-                            default: color = new SDL.SDL_Color { r = 255, g = 255, b = 0, a = 255 }; break; //yellow
-                        }
+                        case 1: color = new SDL.SDL_Color { r = 255, g = 0, b = 0, a = 255 }; break; //red
+                        case 2: color = new SDL.SDL_Color { r = 0, g = 255, b = 0, a = 255 }; break; //green
+                        case 3: color = new SDL.SDL_Color { r = 0, g = 0, b = 255, a = 255 }; break; //blue
+                        case 4: color = new SDL.SDL_Color { r = 255, g = 255, b = 255, a = 255 }; break; //white
+                        default: color = new SDL.SDL_Color { r = 255, g = 255, b = 0, a = 255 }; break; //yellow
                     }
-                    else
+                                      
+                    if (side == 1) 
                     {
-                        switch (worldMap[mapX, mapY])
-                        {
-                            case 1: color = new SDL.SDL_Color { r = 255/2, g = 0, b = 0, a = 255 }; break; //red
-                            case 2: color = new SDL.SDL_Color { r = 0, g = 255/2, b = 0, a = 255 }; break; //green
-                            case 3: color = new SDL.SDL_Color { r = 0, g = 0, b = 255/2, a = 255 }; break; //blue
-                            case 4: color = new SDL.SDL_Color { r = 255/2, g = 255/2, b = 255/2, a = 255 }; break; //white
-                            default: color = new SDL.SDL_Color { r = 255/2, g = 255/2, b = 0, a = 255 }; break; //yellow
-                        }
+                        color.r /= (byte)2;
+                        color.g /= (byte)2;
+                        color.b /= (byte)2;
                     }
-                                                            
+
                     //draw the pixels of the stripe as a vertical line
                     SDL.SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
                     SDL.SDL_RenderDrawLine(renderer, x, drawStart, x, drawEnd);
