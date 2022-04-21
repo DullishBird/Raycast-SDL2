@@ -12,38 +12,13 @@ namespace RaycastEngine
     {
         public static void AlphaRaycast()
         {
+
+            RaycastEngine.WorldMap worldMap = new RaycastEngine.WorldMap("D:/dev/sharp/Doom-SDL-remake/res/map.txt");            
+
             int mapWidth = 24;
             int mapHeight = 24;
             int screenWidth = 640;
             int screenHeight = 480;
-
-            int[,] worldMap =
-                {
-              {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,0,0,0,0,0,2,2,2,2,2,0,0,0,0,3,0,3,0,3,0,0,0,1},
-              {1,0,0,0,0,0,2,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,0,0,0,0,0,2,0,0,0,2,0,0,0,0,3,0,0,0,3,0,0,0,1},
-              {1,0,0,0,0,0,2,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,0,0,0,0,0,2,2,0,2,2,0,0,0,0,3,0,3,0,3,0,0,0,1},
-              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,4,0,4,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,4,0,0,0,0,5,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,4,0,4,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,4,0,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-              {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
-            };
 
             double posX = 22, posY = 12;  //x and y start position
             double dirX = -1, dirY = 0; //initial direction vector
@@ -81,6 +56,8 @@ namespace RaycastEngine
             double moveSpeed =  frameTime * 5.0; //the constant value is in squares/second
             double rotSpeed =  frameTime * 3.0; //the constant value is in radians/second
 
+            var font = SDL_ttf.TTF_OpenFont("C:/Windows/Fonts/Arial.ttf", 20);
+
             while (running)
             {
                 // Check to see if there are any events and continue to do so until the queue is empty.
@@ -91,19 +68,19 @@ namespace RaycastEngine
                         case SDL.SDL_EventType.SDL_QUIT:
                             running = false;
                             break;
-
+                     
                         //move forward if no wall in front of you
                         case SDL.SDL_EventType.SDL_KEYDOWN:
                             if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_w)
                             {
-                                if(worldMap[(int)(posX + dirX * moveSpeed),(int)posY] == 0) posX += dirX * moveSpeed;
-                                if(worldMap[(int)posX,(int)(posY + dirY * moveSpeed)] == 0) posY += dirY * moveSpeed;
+                                if(worldMap.GetWallType((int)(posX + dirX * moveSpeed), (int)posY) == 0) posX += dirX * moveSpeed;
+                                if(worldMap.GetWallType((int)posX, (int)(posY + dirY * moveSpeed)) == 0) posY += dirY * moveSpeed;
                             }
                             //move backwards if no wall behind you
                             if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_s)
                             {
-                                if (worldMap[(int)(posX - dirX * moveSpeed), (int)posY] == 0) posX -= dirX * moveSpeed;
-                                if (worldMap[(int)(posX), (int)(posY - dirY * moveSpeed)] == 0) posY -= dirY * moveSpeed;
+                                if (worldMap.GetWallType((int)(posX - dirX * moveSpeed), (int)posY) == 0) posX -= dirX * moveSpeed;
+                                if (worldMap.GetWallType((int)(posX), (int)(posY - dirY * moveSpeed)) == 0) posY -= dirY * moveSpeed;
                             }
                             //both camera direction and camera plane must be rotated
                             if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_d)
@@ -202,7 +179,7 @@ namespace RaycastEngine
                             side = 1;
                         }
                         //Check if ray has hit a wall
-                        if (worldMap[mapX, mapY] > 0) 
+                        if (worldMap.GetWallType(mapX, mapY) > 0) 
                             hit = 1;
                     }
 
@@ -246,10 +223,11 @@ namespace RaycastEngine
                 time = SDL.SDL_GetTicks();
                 double frameTimee = (time - oldTime) / 1000.0; //frameTime is the time this frame has taken, in seconds
                 SDL.SDL_Color textColor = new SDL.SDL_Color { r = 255, g = 255, b = 255, a = 255 };
-                var font = SDL_ttf.TTF_OpenFont("C:/Windows/Fonts/Arial.ttf", 20);
-                string fpsCounterText = (Math.Round(1.0 / frameTimee)).ToString();
                 
+                string fpsCounterText = (Math.Round(1.0 / frameTimee)).ToString();
+
                 IntPtr message = SDL.SDL_CreateTextureFromSurface(renderer, SDL_ttf.TTF_RenderText_Solid(font, fpsCounterText, textColor));
+                //IntPtr message = SDL.SDL_CreateTextureFromSurface(renderer, IntPtr.Zero);
                 //Console.WriteLine(1.0 / frameTimee); //FPS counter
 
                 var rect = new SDL.SDL_Rect
@@ -263,11 +241,11 @@ namespace RaycastEngine
                 SDL.SDL_RenderCopy(renderer, message, ref rect, ref rect);
                 
                 // Switches out the currently presented render surface with the one we just did work on.
-                SDL.SDL_RenderPresent(renderer);
+                SDL.SDL_RenderPresent(renderer);                
                 SDL.SDL_DestroyTexture(message);
             }
             // Clean up the resources that were created.
-            
+            SDL_ttf.TTF_CloseFont(font);
             SDL.SDL_DestroyRenderer(renderer);
             SDL.SDL_DestroyWindow(renderer);
             SDL.SDL_Quit();
