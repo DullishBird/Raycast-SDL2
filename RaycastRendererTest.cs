@@ -13,12 +13,13 @@ namespace RaycastEngine
         public static void AlphaRaycast()
         {
 
-            RaycastEngine.WorldMap worldMap = new RaycastEngine.WorldMap("D:/dev/sharp/Doom-SDL-remake/res/map.txt");            
+            RaycastEngine.WorldMap worldMap = new RaycastEngine.WorldMap("D:/dev/sharp/Doom-SDL-remake/res/map.txt");
+            
 
-            int mapWidth = 24;
-            int mapHeight = 24;
-            int screenWidth = 640;
-            int screenHeight = 480;
+            //int mapWidth = 24;
+            //int mapHeight = 24;
+            //int screenWidth = 640;
+            //int screenHeight = 480;
 
             double posX = 22, posY = 12;  //x and y start position
             double dirX = -1, dirY = 0; //initial direction vector
@@ -38,6 +39,7 @@ namespace RaycastEngine
             }
 
             RaycastEngine.Window window = new RaycastEngine.Window("SDL .NET 6 Tutorial", 640, 480);
+            RaycastEngine.RenderText renderText = new RaycastEngine.RenderText();
 
             window.Titile = "Test";
 
@@ -56,7 +58,6 @@ namespace RaycastEngine
             double moveSpeed =  frameTime * 5.0; //the constant value is in squares/second
             double rotSpeed =  frameTime * 3.0; //the constant value is in radians/second
 
-            var font = SDL_ttf.TTF_OpenFont("C:/Windows/Fonts/Arial.ttf", 20);
 
             while (running)
             {
@@ -219,35 +220,21 @@ namespace RaycastEngine
                     SDL.SDL_RenderDrawLine(renderer, x, drawStart, x, drawEnd);
                 }
 
+                //creating fps counter
                 oldTime = time;
                 time = SDL.SDL_GetTicks();
-                double frameTimee = (time - oldTime) / 1000.0; //frameTime is the time this frame has taken, in seconds
-                SDL.SDL_Color textColor = new SDL.SDL_Color { r = 255, g = 255, b = 255, a = 255 };
+                double frameCounter = (time - oldTime) / 1000.0; //frameTime is the time this frame has taken, in seconds
+
+                //SDL.SDL_RenderCopy(renderer, message, ref renderText.GetRect(), ref renderText.GetRect());
+                string messageText = Math.Round(1.0 / frameCounter).ToString();
+                renderText.Draw(renderer, messageText, 0, 0);
                 
-                string fpsCounterText = (Math.Round(1.0 / frameTimee)).ToString();
 
-                IntPtr message = SDL.SDL_CreateTextureFromSurface(renderer, SDL_ttf.TTF_RenderText_Solid(font, fpsCounterText, textColor));
-                //IntPtr message = SDL.SDL_CreateTextureFromSurface(renderer, IntPtr.Zero);
-                //Console.WriteLine(1.0 / frameTimee); //FPS counter
-
-                var rect = new SDL.SDL_Rect
-                {
-                    x = 0,
-                    y = 0,
-                    w = 20,
-                    h = 20
-                };
-
-                SDL.SDL_RenderCopy(renderer, message, ref rect, ref rect);
-                
                 // Switches out the currently presented render surface with the one we just did work on.
                 SDL.SDL_RenderPresent(renderer);                
-                SDL.SDL_DestroyTexture(message);
+                
             }
             // Clean up the resources that were created.
-            SDL_ttf.TTF_CloseFont(font);
-            SDL.SDL_DestroyRenderer(renderer);
-            SDL.SDL_DestroyWindow(renderer);
             SDL.SDL_Quit();
         }
 
