@@ -79,6 +79,11 @@ namespace RaycastEngine
         {
             return renderer;
         }
+        ~Window()
+        {
+            SDL.SDL_DestroyRenderer(renderer);
+            SDL.SDL_DestroyWindow(window);
+        }
     }
 
 }

@@ -225,23 +225,6 @@ namespace RaycastEngine
                 time = SDL.SDL_GetTicks();
                 double frameCounter = (time - oldTime) / 1000.0; //frameTime is the time this frame has taken, in seconds
 
-                //SDL.SDL_Color textColor = new SDL.SDL_Color { r = 255, g = 255, b = 255, a = 255 };
-
-                //string fpsCounterText = (Math.Round(1.0 / frameCounter)).ToString();
-
-                //IntPtr message = renderText.CreateMessage(renderer, frameCounter);
-                //IntPtr message = SDL.SDL_CreateTextureFromSurface(renderer, SDL_ttf.TTF_RenderText_Solid(font, fpsCounterText, textColor));
-                //IntPtr message = SDL.SDL_CreateTextureFromSurface(renderer, IntPtr.Zero);
-                //Console.WriteLine(1.0 / frameTimee); //FPS counter
-
-                //var rect = new SDL.SDL_Rect
-                //{
-                //    x = 0,
-                //    y = 0,
-                //    w = 20,
-                //    h = 20
-                //};
-
                 //SDL.SDL_RenderCopy(renderer, message, ref renderText.GetRect(), ref renderText.GetRect());
                 string messageText = Math.Round(1.0 / frameCounter).ToString();
                 renderText.Draw(renderer, messageText, 0, 0);
@@ -252,8 +235,6 @@ namespace RaycastEngine
                 
             }
             // Clean up the resources that were created.
-            SDL.SDL_DestroyRenderer(renderer);
-            SDL.SDL_DestroyWindow(renderer);
             SDL.SDL_Quit();
         }
 
