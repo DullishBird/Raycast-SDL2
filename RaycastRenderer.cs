@@ -8,19 +8,18 @@ using SDL2;
 
 namespace RaycastEngine
 {
-    public class RaycastRendererTest
+    public class RaycastRenderer
     {
-        public static void AlphaRaycast()
+        private WorldMap worldMap = new WorldMap("D:/dev/sharp/Raycast-SDL2/res/map.txt"); // экзем
+
+        //public RaycastRendererTest()
+        //{
+        //    string path = Directory.GetCurrentDirectory() + "/res/map.txt";
+        //    worldMap = new WorldMap(path);
+        //}
+
+        public void Start()
         {
-
-            RaycastEngine.WorldMap worldMap = new RaycastEngine.WorldMap("D:/dev/sharp/Doom-SDL-remake/res/map.txt");
-            
-
-            //int mapWidth = 24;
-            //int mapHeight = 24;
-            //int screenWidth = 640;
-            //int screenHeight = 480;
-
             double posX = 22, posY = 12;  //x and y start position
             double dirX = -1, dirY = 0; //initial direction vector
             double planeX = 0, planeY = 0.66; //the 2d raycaster version of camera plane
@@ -38,8 +37,8 @@ namespace RaycastEngine
                 Console.WriteLine($"There was an issue initilizing SDL_ttf. {SDL_ttf.TTF_GetError()}");
             }
 
-            RaycastEngine.Window window = new RaycastEngine.Window("SDL .NET 6 Tutorial", 640, 480);
-            RaycastEngine.RenderText renderText = new RaycastEngine.RenderText();
+            Window window = new Window("SDL .NET 6 Tutorial", 640, 480);
+            RenderText renderText = new RenderText();
 
             window.Titile = "Test";
 
@@ -57,7 +56,6 @@ namespace RaycastEngine
             
             double moveSpeed =  frameTime * 5.0; //the constant value is in squares/second
             double rotSpeed =  frameTime * 3.0; //the constant value is in radians/second
-
 
             while (running)
             {
@@ -113,113 +111,15 @@ namespace RaycastEngine
                     Console.WriteLine($"There was an issue with clearing the render surface. {SDL.SDL_GetError()}");
                 }
 
-
-                for (int x = 0; x < windowWight; x++)
-                {
-                    //calculate ray position and direction
-                    double cameraX = 2 * x / (double)windowWight - 1; //x-coordinate in camera space
-                    double rayDirX = dirX + planeX * cameraX;
-                    double rayDirY = dirY + planeY * cameraX;
-
-                    //which box of the map we're in
-                    int mapX = (int)posX;
-                    int mapY = (int)posY;
-
-                    //length of ray from current position to next x or y-side
-                    double sideDistX;
-                    double sideDistY;
-
-                    //length of ray from one x or y-side to next x or y-side
-                    double deltaDistX = (rayDirX == 0) ? 1e30 : Math.Abs(1 / rayDirX);
-                    double deltaDistY = (rayDirY == 0) ? 1e30 : Math.Abs(1 / rayDirY);
-                    double perpWallDist;
-
-                    //what direction to step in x or y-direction (either +1 or -1)
-                    int stepX;
-                    int stepY;
-
-                    int hit = 0; //was there a wall hit?
-                    int side = 0; //was a NS or a EW wall hit?
-
-                    //calculate step and initial sideDist
-                    if (rayDirX < 0)
-                    {
-                        stepX = -1;
-                        sideDistX = (posX - mapX) * deltaDistX;
-                    }
-                    else
-                    {
-                        stepX = 1;
-                        sideDistX = (mapX + 1.0 - posX) * deltaDistX;
-                    }
-                    if (rayDirY < 0)
-                    {
-                        stepY = -1;
-                        sideDistY = (posY - mapY) * deltaDistY;
-                    }
-                    else
-                    {
-                        stepY = 1;
-                        sideDistY = (mapY + 1.0 - posY) * deltaDistY;
-                    }
-
-                    //perform DDA
-                    while (hit == 0)
-                    {
-                        //jump to next map square, either in x-direction, or in y-direction
-                        if (sideDistX < sideDistY)
-                        {
-                            sideDistX += deltaDistX;
-                            mapX += stepX;
-                            side = 0;
-                        }
-                        else
-                        {
-                            sideDistY += deltaDistY;
-                            mapY += stepY;
-                            side = 1;
-                        }
-                        //Check if ray has hit a wall
-                        if (worldMap.GetWallType(mapX, mapY) > 0) 
-                            hit = 1;
-                    }
-
-                    if (side == 0) perpWallDist = (sideDistX - deltaDistX);
-                    else perpWallDist = (sideDistY - deltaDistY);
-
-                    //Calculate height of line to draw on screen
-                    int lineHeight = (int)(windowHeight / perpWallDist);
-
-                    //calculate lowest and highest pixel to fill in current stripe
-                    int drawStart = -lineHeight / 2 + windowHeight / 2;
-                    if (drawStart < 0) drawStart = 0;
-
-                    int drawEnd = lineHeight / 2 + windowHeight / 2;
-                    if (drawEnd >= windowHeight) drawEnd = windowHeight - 1;
-
-                    //choose wall color
-                    SDL.SDL_Color color;
-                    switch (worldMap[mapX, mapY])
-                    {
-                        case 1: color = new SDL.SDL_Color { r = 255, g = 0, b = 0, a = 255 }; break; //red
-                        case 2: color = new SDL.SDL_Color { r = 0, g = 255, b = 0, a = 255 }; break; //green
-                        case 3: color = new SDL.SDL_Color { r = 0, g = 0, b = 255, a = 255 }; break; //blue
-                        case 4: color = new SDL.SDL_Color { r = 255, g = 255, b = 255, a = 255 }; break; //white
-                        default: color = new SDL.SDL_Color { r = 255, g = 255, b = 0, a = 255 }; break; //yellow
-                    }
-                                      
-                    if (side == 1) 
-                    {
-                        color.r /= (byte)2;
-                        color.g /= (byte)2;
-                        color.b /= (byte)2;
-                    }
-
-                    //draw the pixels of the stripe as a vertical line
-                    SDL.SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-                    SDL.SDL_RenderDrawLine(renderer, x, drawStart, x, drawEnd);
-                }
-
+                DrawMap(windowWight,
+                    windowHeight,
+                    dirX,
+                    dirY,
+                    planeX,
+                    planeY,
+                    posX,
+                    posY, renderer);
+                
                 //creating fps counter
                 oldTime = time;
                 time = SDL.SDL_GetTicks();
@@ -229,7 +129,6 @@ namespace RaycastEngine
                 string messageText = Math.Round(1.0 / frameCounter).ToString();
                 renderText.Draw(renderer, messageText, 0, 0);
                 
-
                 // Switches out the currently presented render surface with the one we just did work on.
                 SDL.SDL_RenderPresent(renderer);                
                 
@@ -238,5 +137,113 @@ namespace RaycastEngine
             SDL.SDL_Quit();
         }
 
+        private void DrawMap(int windowWight, int windowHeight, double dirX, double dirY, double planeX, double planeY,
+                               double posX, double posY, IntPtr renderer)
+        {
+            for (int x = 0; x < windowWight; x++)
+            {
+                //calculate ray position and direction
+                double cameraX = 2 * x / (double)windowWight - 1; //x-coordinate in camera space
+                double rayDirX = dirX + planeX * cameraX;
+                double rayDirY = dirY + planeY * cameraX;
+
+                //which box of the map we're in
+                int mapX = (int)posX;
+                int mapY = (int)posY;
+
+                //length of ray from current position to next x or y-side
+                double sideDistX;
+                double sideDistY;
+
+                //length of ray from one x or y-side to next x or y-side
+                double deltaDistX = (rayDirX == 0) ? 1e30 : Math.Abs(1 / rayDirX);
+                double deltaDistY = (rayDirY == 0) ? 1e30 : Math.Abs(1 / rayDirY);
+                double perpWallDist;
+
+                //what direction to step in x or y-direction (either +1 or -1)
+                int stepX;
+                int stepY;
+
+                int hit = 0; //was there a wall hit?
+                int side = 0; //was a NS or a EW wall hit?
+
+                //calculate step and initial sideDist
+                if (rayDirX < 0)
+                {
+                    stepX = -1;
+                    sideDistX = (posX - mapX) * deltaDistX;
+                }
+                else
+                {
+                    stepX = 1;
+                    sideDistX = (mapX + 1.0 - posX) * deltaDistX;
+                }
+                if (rayDirY < 0)
+                {
+                    stepY = -1;
+                    sideDistY = (posY - mapY) * deltaDistY;
+                }
+                else
+                {
+                    stepY = 1;
+                    sideDistY = (mapY + 1.0 - posY) * deltaDistY;
+                }
+
+                //perform DDA
+                while (hit == 0)
+                {
+                    //jump to next map square, either in x-direction, or in y-direction
+                    if (sideDistX < sideDistY)
+                    {
+                        sideDistX += deltaDistX;
+                        mapX += stepX;
+                        side = 0;
+                    }
+                    else
+                    {
+                        sideDistY += deltaDistY;
+                        mapY += stepY;
+                        side = 1;
+                    }
+                    //Check if ray has hit a wall
+                    if (worldMap.GetWallType(mapX, mapY) > 0)
+                        hit = 1;
+                }
+
+                if (side == 0) perpWallDist = (sideDistX - deltaDistX);
+                else perpWallDist = (sideDistY - deltaDistY);
+
+                //Calculate height of line to draw on screen
+                int lineHeight = (int)(windowHeight / perpWallDist);
+
+                //calculate lowest and highest pixel to fill in current stripe
+                int drawStart = -lineHeight / 2 + windowHeight / 2;
+                if (drawStart < 0) drawStart = 0;
+
+                int drawEnd = lineHeight / 2 + windowHeight / 2;
+                if (drawEnd >= windowHeight) drawEnd = windowHeight - 1;
+
+                //choose wall color
+                SDL.SDL_Color color;
+                switch (worldMap[mapX, mapY])
+                {
+                    case 1: color = new SDL.SDL_Color { r = 255, g = 0, b = 0, a = 255 }; break; //red
+                    case 2: color = new SDL.SDL_Color { r = 0, g = 255, b = 0, a = 255 }; break; //green
+                    case 3: color = new SDL.SDL_Color { r = 0, g = 0, b = 255, a = 255 }; break; //blue
+                    case 4: color = new SDL.SDL_Color { r = 255, g = 255, b = 255, a = 255 }; break; //white
+                    default: color = new SDL.SDL_Color { r = 255, g = 255, b = 0, a = 255 }; break; //yellow
+                }
+
+                if (side == 1)
+                {
+                    color.r /= (byte)2;
+                    color.g /= (byte)2;
+                    color.b /= (byte)2;
+                }
+                //draw the pixels of the stripe as a vertical line
+                SDL.SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+                SDL.SDL_RenderDrawLine(renderer, x, drawStart, x, drawEnd);
+            }
+        }
     }
 }

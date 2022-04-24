@@ -28,10 +28,10 @@ namespace RaycastEngine
             
             SDL.SDL_Rect dstrect = new SDL.SDL_Rect
             {
-                x = surface.w,
-                y = surface.h,
-                w = x,
-                h = y
+                x = x,
+                y = y,
+                w = surface.w,
+                h = surface.h
             };
 
             SDL.SDL_Rect srcrect = new SDL.SDL_Rect
