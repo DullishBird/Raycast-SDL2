@@ -11,7 +11,8 @@ namespace RaycastEngine
         static void Main()
         {
             //Experimental.StartExperimental();
-            RaycastRendererTest.AlphaRaycast();
+            RaycastRenderer raycast = new RaycastRenderer();
+            raycast.Start();
         }
     }
 }
