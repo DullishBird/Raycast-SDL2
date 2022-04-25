@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using SDL2;
@@ -12,6 +13,7 @@ namespace RaycastEngine
     {
         private WorldMap worldMap = new WorldMap("D:/dev/sharp/Raycast-SDL2/res/map.txt"); // экзем
 
+        //getting path here
         //public RaycastRendererTest()
         //{
         //    string path = Directory.GetCurrentDirectory() + "/res/map.txt";
@@ -20,13 +22,11 @@ namespace RaycastEngine
 
         public void Start()
         {
-            double posX = 22, posY = 12;  //x and y start position
-            double dirX = -1, dirY = 0; //initial direction vector
-            double planeX = 0, planeY = 0.66; //the 2d raycaster version of camera plane
-
-            double time = 0; //time of current frame
-            double oldTime = 0; //time of previous frame
-            
+            float time = 0; //time of current frame
+            float oldTime = 0; //time of previous frame
+            Vector2 camDir = new Vector2(-1, 0);
+            Vector2 camPos = new Vector2(22, 12);
+            Vector2 camPlane = new Vector2(0, 0.66f);
             if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO) < 0)
             {
                 Console.WriteLine($"There was an issue initilizing SDL. {SDL.SDL_GetError()}");
@@ -52,11 +52,13 @@ namespace RaycastEngine
             //timing for input and FPS counter
             oldTime = time;
             time = SDL.SDL_GetTicks();
-            double frameTime = (time - oldTime) / 1000.0; //frameTime is the time this frame has taken, in seconds
+            float frameTime = (time - oldTime) / 1000.0f; //frameTime is the time this frame has taken, in seconds
             
-            double moveSpeed =  frameTime * 5.0; //the constant value is in squares/second
-            double rotSpeed =  frameTime * 3.0; //the constant value is in radians/second
-
+            float moveSpeed =  frameTime * 5.0f; //the constant value is in squares/second
+            float rotSpeed =  frameTime * 3.0f;//the constant value is in radians/second
+            float mrotSpeed = frameTime * 0.025f;//the constant value is in radians/second
+            SDL.SDL_GetMouseState(out int mCamPosX, out int _);
+            float oldMousePos = mCamPosX;
             while (running)
             {
                 // Check to see if there are any events and continue to do so until the queue is empty.
@@ -67,39 +69,45 @@ namespace RaycastEngine
                         case SDL.SDL_EventType.SDL_QUIT:
                             running = false;
                             break;
-                     
+
+                        case SDL.SDL_EventType.SDL_MOUSEMOTION:
+                            {
+                                int mouseCamPosX = e.motion.x;
+                                float currentMouseSpeed = mrotSpeed * (oldMousePos - mouseCamPosX);
+                                Rotating(currentMouseSpeed, ref camDir, ref camPlane);                              
+                                oldMousePos = windowWight / 2;
+                                break;
+                            }
+
                         //move forward if no wall in front of you
                         case SDL.SDL_EventType.SDL_KEYDOWN:
+                            if(e.key.keysym.sym == SDL.SDL_Keycode.SDLK_ESCAPE)
+                            {
+                                SDL.SDL_Quit();
+                                running = false;
+                                break;
+                            }
+
                             if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_w)
                             {
-                                if(worldMap.GetWallType((int)(posX + dirX * moveSpeed), (int)posY) == 0) posX += dirX * moveSpeed;
-                                if(worldMap.GetWallType((int)posX, (int)(posY + dirY * moveSpeed)) == 0) posY += dirY * moveSpeed;
+                                if(worldMap.GetWallType((int)(camPos.X + camDir.X * moveSpeed), (int)camPos.Y) == 0) camPos.X += camDir.X * moveSpeed;
+                                if(worldMap.GetWallType((int)camPos.X, (int)(camPos.Y + camDir.Y * moveSpeed)) == 0) camPos.Y += camDir.Y * moveSpeed;
                             }
                             //move backwards if no wall behind you
                             if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_s)
                             {
-                                if (worldMap.GetWallType((int)(posX - dirX * moveSpeed), (int)posY) == 0) posX -= dirX * moveSpeed;
-                                if (worldMap.GetWallType((int)(posX), (int)(posY - dirY * moveSpeed)) == 0) posY -= dirY * moveSpeed;
+                                if (worldMap.GetWallType((int)(camPos.X - camDir.X * moveSpeed), (int)camPos.Y) == 0) camPos.X -= camDir.X * moveSpeed;
+                                if (worldMap.GetWallType((int)(camPos.X), (int)(camPos.Y - camDir.Y * moveSpeed)) == 0) camPos.Y -= camDir.Y * moveSpeed;
                             }
                             //both camera direction and camera plane must be rotated
                             if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_d)
                             {
-                                double oldDirX = dirX;
-                                dirX = dirX * Math.Cos(-rotSpeed) - dirY * Math.Sin(-rotSpeed);
-                                dirY = oldDirX * Math.Sin(-rotSpeed) + dirY * Math.Cos(-rotSpeed);
-                                double oldPlaneX = planeX;
-                                planeX = planeX * Math.Cos(-rotSpeed) - planeY * Math.Sin(-rotSpeed);
-                                planeY = oldPlaneX * Math.Sin(-rotSpeed) + planeY * Math.Cos(-rotSpeed);
+                                Rotating(-rotSpeed, ref camDir, ref camPlane);
                             }
 
                             if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_a)
                             {
-                                double oldDirX = dirX;
-                                dirX = dirX * Math.Cos(rotSpeed) - dirY * Math.Sin(rotSpeed);
-                                dirY = oldDirX * Math.Sin(rotSpeed) + dirY * Math.Cos(rotSpeed);
-                                double oldPlaneX = planeX;
-                                planeX = planeX * Math.Cos(rotSpeed) - planeY * Math.Sin(rotSpeed);
-                                planeY = oldPlaneX * Math.Sin(rotSpeed) + planeY * Math.Cos(rotSpeed);
+                                Rotating(rotSpeed, ref camDir, ref camPlane);
                             }
                             break;
                     }
@@ -112,53 +120,51 @@ namespace RaycastEngine
                 }
 
                 DrawMap(windowWight,
-                    windowHeight,
-                    dirX,
-                    dirY,
-                    planeX,
-                    planeY,
-                    posX,
-                    posY, renderer);
+                        windowHeight,
+                        camDir,
+                        camPlane,
+                        camPos,
+                        renderer);
                 
                 //creating fps counter
                 oldTime = time;
                 time = SDL.SDL_GetTicks();
-                double frameCounter = (time - oldTime) / 1000.0; //frameTime is the time this frame has taken, in seconds
+                float frameCounter = (time - oldTime) / 1000.0f; //frameTime is the time this frame has taken, in seconds
 
                 //SDL.SDL_RenderCopy(renderer, message, ref renderText.GetRect(), ref renderText.GetRect());
-                string messageText = Math.Round(1.0 / frameCounter).ToString();
+                string messageText = MathF.Round(1.0f / frameCounter).ToString();
                 renderText.Draw(renderer, messageText, 0, 0);
-                
+
+                SDL.SDL_WarpMouseInWindow(window.GetNative(), windowWight / 2, windowHeight / 2);
                 // Switches out the currently presented render surface with the one we just did work on.
-                SDL.SDL_RenderPresent(renderer);                
-                
+                SDL.SDL_RenderPresent(renderer);
             }
             // Clean up the resources that were created.
             SDL.SDL_Quit();
         }
 
-        private void DrawMap(int windowWight, int windowHeight, double dirX, double dirY, double planeX, double planeY,
-                               double posX, double posY, IntPtr renderer)
+        private void DrawMap(int windowWight, int windowHeight, Vector2 camDir, Vector2 camPlane,
+                               Vector2 camPos, IntPtr renderer)
         {
             for (int x = 0; x < windowWight; x++)
             {
                 //calculate ray position and direction
-                double cameraX = 2 * x / (double)windowWight - 1; //x-coordinate in camera space
-                double rayDirX = dirX + planeX * cameraX;
-                double rayDirY = dirY + planeY * cameraX;
+                float cameraX = 2 * x / (float)windowWight - 1; //x-coordinate in camera space
+                float rayCamDirX = camDir.X + camPlane.X * cameraX;
+                float rayCamDirY = camDir.Y + camPlane.Y * cameraX;
 
                 //which box of the map we're in
-                int mapX = (int)posX;
-                int mapY = (int)posY;
+                int mapX = (int)camPos.X;
+                int mapY = (int)camPos.Y;
 
                 //length of ray from current position to next x or y-side
-                double sideDistX;
-                double sideDistY;
+                float sideDistX;
+                float sideDistY;
 
                 //length of ray from one x or y-side to next x or y-side
-                double deltaDistX = (rayDirX == 0) ? 1e30 : Math.Abs(1 / rayDirX);
-                double deltaDistY = (rayDirY == 0) ? 1e30 : Math.Abs(1 / rayDirY);
-                double perpWallDist;
+                float deltaDistX = (rayCamDirX == 0) ? 1e30f : MathF.Abs(1 / rayCamDirX);
+                float deltaDistY = (rayCamDirY == 0) ? 1e30f : MathF.Abs(1 / rayCamDirY);
+                float perpWallDist;
 
                 //what direction to step in x or y-direction (either +1 or -1)
                 int stepX;
@@ -168,25 +174,25 @@ namespace RaycastEngine
                 int side = 0; //was a NS or a EW wall hit?
 
                 //calculate step and initial sideDist
-                if (rayDirX < 0)
+                if (rayCamDirX < 0)
                 {
                     stepX = -1;
-                    sideDistX = (posX - mapX) * deltaDistX;
+                    sideDistX = (camPos.X - mapX) * deltaDistX;
                 }
                 else
                 {
                     stepX = 1;
-                    sideDistX = (mapX + 1.0 - posX) * deltaDistX;
+                    sideDistX = (mapX + 1.0f - camPos.X) * deltaDistX;
                 }
-                if (rayDirY < 0)
+                if (rayCamDirY < 0)
                 {
                     stepY = -1;
-                    sideDistY = (posY - mapY) * deltaDistY;
+                    sideDistY = (camPos.Y - mapY) * deltaDistY;
                 }
                 else
                 {
                     stepY = 1;
-                    sideDistY = (mapY + 1.0 - posY) * deltaDistY;
+                    sideDistY = (mapY + 1.0f - camPos.Y) * deltaDistY;
                 }
 
                 //perform DDA
@@ -239,11 +245,21 @@ namespace RaycastEngine
                     color.r /= (byte)2;
                     color.g /= (byte)2;
                     color.b /= (byte)2;
-                }
+                }                
                 //draw the pixels of the stripe as a vertical line
                 SDL.SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
                 SDL.SDL_RenderDrawLine(renderer, x, drawStart, x, drawEnd);
             }
+        }
+
+        private void Rotating(float rotSpeed, ref Vector2 camDir, ref Vector2 camPlane)
+        {
+            float oldCamDirX = camDir.X;
+            camDir.X = camDir.X * MathF.Cos(rotSpeed) - camDir.Y * MathF.Sin(rotSpeed);
+            camDir.Y = oldCamDirX * MathF.Sin(rotSpeed) + camDir.Y * MathF.Cos(rotSpeed);
+            float oldCamPlaneX = camPlane.X;
+            camPlane.X = camPlane.X * MathF.Cos(rotSpeed) - camPlane.Y * MathF.Sin(rotSpeed);
+            camPlane.Y = oldCamPlaneX * MathF.Sin(rotSpeed) + camPlane.Y * MathF.Cos(rotSpeed);
         }
     }
 }
