@@ -44,6 +44,7 @@ namespace RaycastEngine
 
             IntPtr message = SDL.SDL_CreateTextureFromSurface(renderer, textSolid);
             SDL.SDL_RenderCopy(renderer, message, ref srcrect, ref dstrect);
+            //SDL.SDL_RenderCopyEx(renderer, message, IntPtr.Zero, IntPtr.Zero, 0, IntPtr.Zero, SDL.SDL_RendererFlip.SDL_FLIP_VERTICAL);
             SDL.SDL_DestroyTexture(message);            
         }
 
