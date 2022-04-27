@@ -13,10 +13,12 @@ namespace RaycastEngine
     public class RaycastRenderer
     {
         private string path = "";
-        private WorldMap worldMap;// = new WorldMap("D:/dev/sharp/Raycast-SDL2/res/map.txt"); // экзем
+        private WorldMap worldMap;
         int texWidth = 64;
         int texHeight = 64;
         List<UInt32>[] texture = new List<UInt32>[8];
+        Window window = new Window("SDL .NET 6 Tutorial", 640, 480);
+
         public RaycastRenderer()
         {
             path = Environment.CurrentDirectory;
@@ -47,7 +49,7 @@ namespace RaycastEngine
                 Console.WriteLine($"There was an issue initilizing SDL_ttf. {SDL_ttf.TTF_GetError()}");
             }
 
-            Window window = new Window("SDL .NET 6 Tutorial", 640, 480);
+            //Window window = new Window("SDL .NET 6 Tutorial", 640, 480);
             RenderText renderText = new RenderText();
 
             window.Titile = "Test";
@@ -64,47 +66,21 @@ namespace RaycastEngine
 
             for (int i = 0; i < 8; i++) texture[i] = Enumerable.Repeat(0u, windowHeight * windowWight).ToList();
 
-            for (int x = 0; x < texWidth; x++)
-            {
-                for (int y = 0; y < texHeight; y++)
-                {
-                    int xorcolor = (x * 256 / texWidth) ^ (y * 256 / texHeight);
-                    int ycolor = y * 256 / texWidth;
-                    int xycolor = y * 128 / texHeight + x * 128 / texWidth;
-                    texture[0][texWidth * y + x] = 65536 * 254 * Convert.ToUInt32(x != y && x != texWidth - y); //flat red texture with black cross
-                    texture[1][texWidth * y + x] = (UInt32)(xycolor + 256 * xycolor + 65536 * xycolor); //sloped greyscale
-                    texture[2][texWidth * y + x] = (UInt32)(256 * xycolor + 65536 * xycolor); //sloped yellow gradient
-                    texture[3][texWidth * y + x] = (UInt32)(xorcolor + 256 * xorcolor + 65536 * xorcolor); //xor greyscale
-                    texture[4][texWidth * y + x] = (UInt32)(256 * xorcolor); //xor green
-                    texture[5][texWidth * y + x] = (UInt32)(65536 * 192 * (x % 16 & y % 16)); //red bricks
-                    texture[6][texWidth * y + x] = (UInt32)(65536 * ycolor); //red gradient
-                    texture[7][texWidth * y + x] = 128 + 256 * 128 + 65536 * 128; //flat grey texture
-                }
-            }
-            texture[0] = GetTexturePixels(path + "/res/pics/eagle.png"); //flat red texture with black cross
-            texture[1] = GetTexturePixels(path + "/res/pics/redbrick.png"); //sloped greyscale
-            texture[2] = GetTexturePixels(path + "/res/pics/purplestone.png"); //sloped yellow gradient
-            texture[3] = GetTexturePixels(path + "/res/pics/greystone.png"); //xor greyscale
-            texture[4] = GetTexturePixels(path + "/res/pics/bluestone.png"); //xor green
-            texture[5] = GetTexturePixels(path + "/res/pics/mossy.png"); //red bricks
-            texture[6] = GetTexturePixels(path + "/res/pics/wood.png"); //red gradient
-            texture[7] = GetTexturePixels(path + "/res/pics/colorstone.png"); //flat grey texture
-
-            //for (int i = 0; i < 8; i++) texture[i] = new List<UInt32>(new UInt32 [windowHeight * windowWight]);
+            //Choose between generated textures and Wolfenstein 3D textures here
+            //LoadGeneratedTexures();
+            LoadTexures();
+            
             //timing for input and FPS counter
             oldTime = time;
             time = SDL.SDL_GetTicks();
             float frameTime = (time - oldTime) / 1000.0f; //frameTime is the time this frame has taken, in seconds
 
-            float moveSpeed = frameTime * 0.1f; //the constant value is in squares/second
+            float moveSpeed = frameTime * 0.3f; //the constant value is in squares/second
             float rotSpeed = frameTime * 0.1f;//the constant value is in radians/second
             float mrotSpeed = frameTime * 0.025f;//the constant value is in radians/second
-            SDL.SDL_GetMouseState(out int mCamPosX, out int _);
+            SDL.SDL_GetMouseState(out int mCamPosX, out int mCamPosY);
             float oldMousePos = mCamPosX;
 
-            //IntPtr texTarget = SDL.SDL_CreateTexture(renderer, SDL.SDL_PIXELFORMAT_RGBA8888,
-            //                                             (int)SDL.SDL_TextureAccess.SDL_TEXTUREACCESS_STREAMING,
-            //                                             windowWight, windowHeight);
             while (running)
             {
                 // Check to see if there are any events and continue to do so until the queue is empty.
@@ -129,7 +105,6 @@ namespace RaycastEngine
                         case SDL.SDL_EventType.SDL_KEYDOWN:
                             if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_ESCAPE)
                             {
-                                SDL.SDL_Quit();
                                 running = false;
                                 break;
                             }
@@ -172,14 +147,6 @@ namespace RaycastEngine
                         camPos,
                         renderer,
                         buffer);
-                //var color = 0xff000000u;
-                //for (int i = 0; i < buffer.Length; i++)
-                //{
-
-                //    //buffer[i] = 0xff0000ff;
-                //    buffer[i] += color;
-                //    //color += 100;
-                //}
 
                 IntPtr frameTexture = IntPtr.Zero;
 
@@ -189,43 +156,20 @@ namespace RaycastEngine
                     fixed (UInt32* bufferRawPtr = buffer)
                     {
                         IntPtr bufferIntPtr = (IntPtr)bufferRawPtr;
-                        //0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF
 
                         UInt32 rmask, gmask, bmask, amask;
-                        //rmask = 0x000000ff;
-                        //gmask = 0x0000ff00;
-                        //bmask = 0x00ff0000;
-                        //amask = 0xff000000;
                         rmask = 0xff000000;
                         gmask = 0x00ff0000;
                         bmask = 0x0000ff00;
                         amask = 0x000000ff;
 
-                        int depth = 4 * 8, 
+                        int depth = 4 * 8,
                             pitch = windowWight * 4;
 
                         IntPtr surface = SDL.SDL_CreateRGBSurfaceFrom(bufferIntPtr, windowWight, windowHeight, depth, pitch, rmask, gmask, bmask, amask);
 
-
-                        //SDL.SDL_Surface surfaceDebug = (SDL.SDL_Surface)Marshal.PtrToStructure(surface, typeof(SDL.SDL_Surface));
-                        //var pointer = (UInt32*)surfaceDebug.pixels.ToPointer();
-                        //UInt32 first = pointer[0];
-
                         frameTexture = SDL.SDL_CreateTextureFromSurface(renderer, surface);
                         SDL.SDL_FreeSurface(surface);
-
-                        //var surfacePtr = SDL.SDL_GetWindowSurface(window.GetNative());
-                        //SDL.SDL_Surface surface = (SDL.SDL_Surface)Marshal.PtrToStructure(surfacePtr, typeof(SDL.SDL_Surface));
-                        //surface.pixels = ptr;
-                        //Marshal.StructureToPtr(surface, surfacePtr, false);
-                        //frameTexture = SDL.SDL_CreateTextureFromSurface(renderer, surfacePtr);
-                        //if (SDL.SDL_UpdateTexture(texTarget, IntPtr.Zero, ptr, texWidth * 4) < 0)
-                        //{
-                        //    Console.WriteLine($"There was an issue SDL_UpdateTexture. {SDL.SDL_GetError()}");
-                        //}
-                        //IntPtr userData = SDL.SDL_GetTextureUserData(texTarget);
-                        //var pointer = (UInt32*)userData.ToPointer();
-                        //UInt32 first = pointer[0];
                     }
                 }
 
@@ -249,7 +193,7 @@ namespace RaycastEngine
                 string messageText = MathF.Round(1.0f / frameCounter).ToString();
                 renderText.Draw(renderer, messageText, 0, 0);
 
-                //SDL.SDL_WarpMouseInWindow(window.GetNative(), windowWight / 2, windowHeight / 2);
+                SDL.SDL_WarpMouseInWindow(window.GetNative(), windowWight / 2, windowHeight / 2);
                 // Switches out the currently presented render surface with the one we just did work on.
                 SDL.SDL_RenderPresent(renderer);
             }
@@ -332,7 +276,7 @@ namespace RaycastEngine
 
                 if (side == 0) perpWallDist = (sideDistX - deltaDistX);
                 else perpWallDist = (sideDistY - deltaDistY);
-                //SDL_image
+
                 //Calculate height of line to draw on screen
                 int lineHeight = (int)(windowHeight / perpWallDist);
 
@@ -342,14 +286,13 @@ namespace RaycastEngine
 
                 int drawEnd = lineHeight / 2 + windowHeight / 2;
                 if (drawEnd >= windowHeight) drawEnd = windowHeight - 1;
-
                 //texturing calculations
                 int texNum = worldMap.GetWallType(mapX, mapY) - 1; //1 subtracted from it so that texture 0 can be used!
 
                 //calculate value of wallX
                 double wallX; //where exactly the wall was hit
                 if (side == 0) wallX = camPos.Y + perpWallDist * rayCamDirY;
-                else           wallX = camPos.X + perpWallDist * rayCamDirX;
+                else wallX = camPos.X + perpWallDist * rayCamDirX;
                 wallX -= Math.Floor((wallX));
 
                 //x coordinate on the texture
@@ -374,27 +317,6 @@ namespace RaycastEngine
 
                     buffer[y * windowWight + x] = color;
                 }
-
-                //OLD  choose wall color
-                //SDL.SDL_Color color;
-                //switch (worldMap[mapX, mapY])
-                //{
-                //    case 1: color = new SDL.SDL_Color { r = 255, g = 0, b = 0, a = 255 }; break; //red
-                //    case 2: color = new SDL.SDL_Color { r = 0, g = 255, b = 0, a = 255 }; break; //green
-                //    case 3: color = new SDL.SDL_Color { r = 0, g = 0, b = 255, a = 255 }; break; //blue
-                //    case 4: color = new SDL.SDL_Color { r = 255, g = 255, b = 255, a = 255 }; break; //white
-                //    default: color = new SDL.SDL_Color { r = 255, g = 255, b = 0, a = 255 }; break; //yellow
-                //}
-
-                //if (side == 1)
-                //{
-                //    color.r /= (byte)2;
-                //    color.g /= (byte)2;
-                //    color.b /= (byte)2;
-                //}                
-                ////draw the pixels of the stripe as a vertical line
-                //SDL.SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-                //SDL.SDL_RenderDrawLine(renderer, x, drawStart, x, drawEnd);
             }
         }
 
@@ -412,10 +334,10 @@ namespace RaycastEngine
         {
             List<uint> pixels = new List<uint>();
             IntPtr image = SDL_image.IMG_Load(path);
-            
+
             SDL.SDL_Surface surfaceImage = (SDL.SDL_Surface)Marshal.PtrToStructure(image, typeof(SDL.SDL_Surface));
             SDL.SDL_PixelFormat format = (SDL.SDL_PixelFormat)Marshal.PtrToStructure(surfaceImage.format, typeof(SDL.SDL_PixelFormat));
-            
+
             unsafe
             {
                 var srcPixelPtr = (byte*)surfaceImage.pixels.ToPointer();
@@ -428,7 +350,6 @@ namespace RaycastEngine
                         UInt32 red = pixelColor & format.Rmask;
                         UInt32 green = pixelColor & format.Gmask;
                         UInt32 blue = pixelColor & format.Bmask;
-                        //UInt32 alpha = pixelColor & format.Amask
                         UInt32 alpha = 0x000000ff;
 
                         UInt32 redWithShift = red << 24;
@@ -446,6 +367,44 @@ namespace RaycastEngine
             }
 
             return pixels;
+        }
+        private List<uint>[] LoadGeneratedTexures()
+        {
+            for (int i = 0; i < 8; i++) texture[i] = Enumerable.Repeat(0u, window.GetHeight() * window.GetWight()).ToList();
+
+            for (int x = 0; x < texWidth; x++)
+            {
+                for (int y = 0; y < texHeight; y++)
+                {
+                    int xorcolor = (x * 256 / texWidth) ^ (y * 256 / texHeight);
+                    int ycolor = y * 256 / texWidth;
+                    int xycolor = y * 128 / texHeight + x * 128 / texWidth;
+                    texture[0][texWidth * y + x] = 65536 * 254 * Convert.ToUInt32(x != y && x != texWidth - y); //flat red texture with black cross
+                    texture[1][texWidth * y + x] = (UInt32)(xycolor + 256 * xycolor + 65536 * xycolor); //sloped greyscale
+                    texture[2][texWidth * y + x] = (UInt32)(256 * xycolor + 65536 * xycolor); //sloped yellow gradient
+                    texture[3][texWidth * y + x] = (UInt32)(xorcolor + 256 * xorcolor + 65536 * xorcolor); //xor greyscale
+                    texture[4][texWidth * y + x] = (UInt32)(256 * xorcolor); //xor green
+                    texture[5][texWidth * y + x] = (UInt32)(65536 * 192 * (x % 16 & y % 16)); //red bricks
+                    texture[6][texWidth * y + x] = (UInt32)(65536 * ycolor); //red gradient
+                    texture[7][texWidth * y + x] = 128 + 256 * 128 + 65536 * 128; //flat grey texture
+                }
+            }
+        return texture;
+        }
+
+        private List<uint>[] LoadTexures()
+        {
+            for (int i = 0; i < 8; i++) texture[i] = Enumerable.Repeat(0u, window.GetHeight() * window.GetWight()).ToList();
+
+            texture[0] = GetTexturePixels(path + "/res/pics/eagle.png");
+            texture[1] = GetTexturePixels(path + "/res/pics/redbrick.png");
+            texture[2] = GetTexturePixels(path + "/res/pics/purplestone.png");
+            texture[3] = GetTexturePixels(path + "/res/pics/greystone.png");
+            texture[4] = GetTexturePixels(path + "/res/pics/bluestone.png");
+            texture[5] = GetTexturePixels(path + "/res/pics/mossy.png");
+            texture[6] = GetTexturePixels(path + "/res/pics/wood.png");
+            texture[7] = GetTexturePixels(path + "/res/pics/colorstone.png");
+            return texture;
         }
     }
 }
