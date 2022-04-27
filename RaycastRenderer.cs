@@ -36,7 +36,7 @@ namespace RaycastEngine
             Vector2 camDir = new Vector2(-1, 0);
             Vector2 camPos = new Vector2(22, 12);
             Vector2 camPlane = new Vector2(0, 0.66f);
-            
+
             if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO) < 0)
             {
                 Console.WriteLine($"There was an issue initilizing SDL. {SDL.SDL_GetError()}");
@@ -64,19 +64,20 @@ namespace RaycastEngine
 
             for (int i = 0; i < 8; i++) texture[i] = Enumerable.Repeat(0u, windowHeight * windowWight).ToList();
 
-            for(int x = 0; x < texWidth; x++)
+            for (int x = 0; x < texWidth; x++)
             {
                 for (int y = 0; y < texHeight; y++)
                 {
                     int xorcolor = (x * 256 / texWidth) ^ (y * 256 / texHeight);
+                    int ycolor = y * 256 / texWidth;
                     int xycolor = y * 128 / texHeight + x * 128 / texWidth;
                     texture[0][texWidth * y + x] = 65536 * 254 * Convert.ToUInt32(x != y && x != texWidth - y); //flat red texture with black cross
                     texture[1][texWidth * y + x] = (UInt32)(xycolor + 256 * xycolor + 65536 * xycolor); //sloped greyscale
                     texture[2][texWidth * y + x] = (UInt32)(256 * xycolor + 65536 * xycolor); //sloped yellow gradient
                     texture[3][texWidth * y + x] = (UInt32)(xorcolor + 256 * xorcolor + 65536 * xorcolor); //xor greyscale
                     texture[4][texWidth * y + x] = (UInt32)(256 * xorcolor); //xor green
-                    texture[5][texWidth * y + x] = (UInt32)(65536u * 192u * (x % 16 & y % 16)); //red bricks
-                    texture[6][texWidth * y + x] = (UInt32)(65536 * xycolor); //red gradient
+                    texture[5][texWidth * y + x] = (UInt32)(65536 * 192 * (x % 16 & y % 16)); //red bricks
+                    texture[6][texWidth * y + x] = (UInt32)(65536 * ycolor); //red gradient
                     texture[7][texWidth * y + x] = 128 + 256 * 128 + 65536 * 128; //flat grey texture
                 }
             }
@@ -94,9 +95,9 @@ namespace RaycastEngine
             oldTime = time;
             time = SDL.SDL_GetTicks();
             float frameTime = (time - oldTime) / 1000.0f; //frameTime is the time this frame has taken, in seconds
-            
-            float moveSpeed =  frameTime * 5.0f; //the constant value is in squares/second
-            float rotSpeed =  frameTime * 3.0f;//the constant value is in radians/second
+
+            float moveSpeed = frameTime * 0.1f; //the constant value is in squares/second
+            float rotSpeed = frameTime * 0.1f;//the constant value is in radians/second
             float mrotSpeed = frameTime * 0.025f;//the constant value is in radians/second
             SDL.SDL_GetMouseState(out int mCamPosX, out int _);
             float oldMousePos = mCamPosX;
@@ -119,14 +120,14 @@ namespace RaycastEngine
                             {
                                 int mouseCamPosX = e.motion.x;
                                 float currentMouseSpeed = mrotSpeed * (oldMousePos - mouseCamPosX);
-                                Rotating(currentMouseSpeed, ref camDir, ref camPlane);                              
+                                Rotating(currentMouseSpeed, ref camDir, ref camPlane);
                                 oldMousePos = windowWight / 2;
                                 break;
                             }
 
                         //move forward if no wall in front of you
                         case SDL.SDL_EventType.SDL_KEYDOWN:
-                            if(e.key.keysym.sym == SDL.SDL_Keycode.SDLK_ESCAPE)
+                            if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_ESCAPE)
                             {
                                 SDL.SDL_Quit();
                                 running = false;
@@ -135,8 +136,8 @@ namespace RaycastEngine
 
                             if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_w)
                             {
-                                if(worldMap.GetWallType((int)(camPos.X + camDir.X * moveSpeed), (int)camPos.Y) == 0) camPos.X += camDir.X * moveSpeed;
-                                if(worldMap.GetWallType((int)camPos.X, (int)(camPos.Y + camDir.Y * moveSpeed)) == 0) camPos.Y += camDir.Y * moveSpeed;
+                                if (worldMap.GetWallType((int)(camPos.X + camDir.X * moveSpeed), (int)camPos.Y) == 0) camPos.X += camDir.X * moveSpeed;
+                                if (worldMap.GetWallType((int)camPos.X, (int)(camPos.Y + camDir.Y * moveSpeed)) == 0) camPos.Y += camDir.Y * moveSpeed;
                             }
                             //move backwards if no wall behind you
                             if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_s)
@@ -185,20 +186,34 @@ namespace RaycastEngine
                 //Now render to the texture
                 unsafe
                 {
-                    fixed (UInt32* p = buffer)
+                    fixed (UInt32* bufferRawPtr = buffer)
                     {
-                        IntPtr ptr = (IntPtr)p;
-                        IntPtr surface = SDL.SDL_CreateRGBSurfaceFrom(ptr, windowWight, windowHeight, 4 * 8, windowWight * 4, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
-                        SDL.SDL_Surface surfaceDebug = (SDL.SDL_Surface)Marshal.PtrToStructure(surface, typeof(SDL.SDL_Surface));
-                        var pointer = (UInt32*)surfaceDebug.pixels.ToPointer();
-                        UInt32 first = pointer[0];
-                        //for (int i = 0; i < windowWight* windowHeight; i++)
-                        //    {
-                        //        Console.WriteLine(pointer[i]);
-                        //        Console.WriteLine("\n");
-                        //    }
+                        IntPtr bufferIntPtr = (IntPtr)bufferRawPtr;
+                        //0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF
+
+                        UInt32 rmask, gmask, bmask, amask;
+                        //rmask = 0x000000ff;
+                        //gmask = 0x0000ff00;
+                        //bmask = 0x00ff0000;
+                        //amask = 0xff000000;
+                        rmask = 0xff000000;
+                        gmask = 0x00ff0000;
+                        bmask = 0x0000ff00;
+                        amask = 0x000000ff;
+
+                        int depth = 4 * 8, 
+                            pitch = windowWight * 4;
+
+                        IntPtr surface = SDL.SDL_CreateRGBSurfaceFrom(bufferIntPtr, windowWight, windowHeight, depth, pitch, rmask, gmask, bmask, amask);
+
+
+                        //SDL.SDL_Surface surfaceDebug = (SDL.SDL_Surface)Marshal.PtrToStructure(surface, typeof(SDL.SDL_Surface));
+                        //var pointer = (UInt32*)surfaceDebug.pixels.ToPointer();
+                        //UInt32 first = pointer[0];
+
                         frameTexture = SDL.SDL_CreateTextureFromSurface(renderer, surface);
                         SDL.SDL_FreeSurface(surface);
+
                         //var surfacePtr = SDL.SDL_GetWindowSurface(window.GetNative());
                         //SDL.SDL_Surface surface = (SDL.SDL_Surface)Marshal.PtrToStructure(surfacePtr, typeof(SDL.SDL_Surface));
                         //surface.pixels = ptr;
@@ -212,22 +227,19 @@ namespace RaycastEngine
                         //var pointer = (UInt32*)userData.ToPointer();
                         //UInt32 first = pointer[0];
                     }
-
                 }
-                //SDL.SDL_SetRenderTarget(renderer, texTarget);
-                //SDL.SDL_RenderClear(renderer);
-                //SDL.SDL_RenderCopy(renderer, bmpTex, null, null);
-                ////Detach the texture
-                //SDL.SDL_SetRenderTarget(renderer, null);
 
                 //Now render the texture target to our screen, but upside down
                 //SDL.SDL_RenderClear(renderer);
-                if (SDL.SDL_RenderCopyEx(renderer, frameTexture, IntPtr.Zero, IntPtr.Zero, 0, IntPtr.Zero, SDL.SDL_RendererFlip.SDL_FLIP_VERTICAL) < 0)
+
+                if (SDL.SDL_RenderCopyEx(renderer, frameTexture, IntPtr.Zero, IntPtr.Zero, 0, IntPtr.Zero, SDL.SDL_RendererFlip.SDL_FLIP_NONE) < 0)
                 {
                     Console.WriteLine($"There was an issue with SDL_RenderCopyEx. {SDL.SDL_GetError()}");
                 };
+
                 SDL.SDL_DestroyTexture(frameTexture);
                 for (int i = 0; i < buffer.Length; i++) buffer[i] = 0; //clear the buffer instead of cls()
+
                 //creating fps counter
                 oldTime = time;
                 time = SDL.SDL_GetTicks();
@@ -237,7 +249,7 @@ namespace RaycastEngine
                 string messageText = MathF.Round(1.0f / frameCounter).ToString();
                 renderText.Draw(renderer, messageText, 0, 0);
 
-                SDL.SDL_WarpMouseInWindow(window.GetNative(), windowWight / 2, windowHeight / 2);
+                //SDL.SDL_WarpMouseInWindow(window.GetNative(), windowWight / 2, windowHeight / 2);
                 // Switches out the currently presented render surface with the one we just did work on.
                 SDL.SDL_RenderPresent(renderer);
             }
@@ -336,15 +348,18 @@ namespace RaycastEngine
 
                 //calculate value of wallX
                 double wallX; //where exactly the wall was hit
-                if (side == 0) wallX = camPos.Y + perpWallDist * camDir.Y;
-                else wallX = camPos.X + perpWallDist * camDir.X;
+                if (side == 0) wallX = camPos.Y + perpWallDist * rayCamDirY;
+                else           wallX = camPos.X + perpWallDist * rayCamDirX;
                 wallX -= Math.Floor((wallX));
 
                 //x coordinate on the texture
                 int texX = (int)(wallX * (double)(texWidth));
-                if (side == 0 && camDir.X > 0) texX = texWidth - texX - 1;
-                if (side == 1 && camDir.Y < 0) texX = texWidth - texX - 1;
+                if (side == 0 && rayCamDirX > 0)
+                    texX = texWidth - texX - 1;
+                if (side == 1 && rayCamDirY < 0)
+                    texX = texWidth - texX - 1;
 
+                // How much to increase the texture coordinate per screen pixel
                 double step = 1.0 * texHeight / lineHeight;
                 // Starting texture coordinate
                 double texPos = (drawStart - windowHeight / 2 + lineHeight / 2) * step;
@@ -356,9 +371,10 @@ namespace RaycastEngine
                     UInt32 color = texture[texNum][texHeight * texY + texX];
                     ////make color darker for y-sides: R, G and B byte each divided through two with a "shift" and an "and"
                     //if (side == 1) color = (color >> 1) & 8355711;
-                    //
+
                     buffer[y * windowWight + x] = color;
                 }
+
                 //OLD  choose wall color
                 //SDL.SDL_Color color;
                 //switch (worldMap[mapX, mapY])
@@ -391,43 +407,45 @@ namespace RaycastEngine
             camPlane.X = camPlane.X * MathF.Cos(rotSpeed) - camPlane.Y * MathF.Sin(rotSpeed);
             camPlane.Y = oldCamPlaneX * MathF.Sin(rotSpeed) + camPlane.Y * MathF.Cos(rotSpeed);
         }
-        
+
         private List<uint> GetTexturePixels(string path)
         {
             List<uint> pixels = new List<uint>();
             IntPtr image = SDL_image.IMG_Load(path);
+            
             SDL.SDL_Surface surfaceImage = (SDL.SDL_Surface)Marshal.PtrToStructure(image, typeof(SDL.SDL_Surface));
             SDL.SDL_PixelFormat format = (SDL.SDL_PixelFormat)Marshal.PtrToStructure(surfaceImage.format, typeof(SDL.SDL_PixelFormat));
+            
             unsafe
             {
                 var srcPixelPtr = (byte*)surfaceImage.pixels.ToPointer();
-                //for (int x = 0; x < surfaceImage.w; x++)
-                //{
-                //    for (int y = 0; y < surfaceImage.h; y++)
-                //    {
-                //        //Uint32 * const target_pixel = (Uint32*)((Uint8*)surface->pixels
-                //        //                         + y * surface->pitch
-                //        //                         + x * surface->format->BytesPerPixel);
-                //        var test = srcPixelPtr + 10;
-                //        pixels.Add(*(UInt32*)(srcPixelPtr + y * surfaceImage.pitch + x * format.BytesPerPixel));
-                //    }
-                //}
                 for (int y = 0; y < surfaceImage.h; y++)
                 {
                     for (int x = 0; x < surfaceImage.w; x++)
                     {
-                        //Uint32 * const target_pixel = (Uint32*)((Uint8*)surface->pixels
-                        //                         + y * surface->pitch
-                        //                         + x * surface->format->BytesPerPixel);
-                        var test = srcPixelPtr + 10;
-                        pixels.Add(*(UInt32*)(srcPixelPtr + x * surfaceImage.pitch + y * format.BytesPerPixel));
+                        UInt32 pixelColor = *(UInt32*)(srcPixelPtr + y * surfaceImage.pitch + x * format.BytesPerPixel);
+
+                        UInt32 red = pixelColor & format.Rmask;
+                        UInt32 green = pixelColor & format.Gmask;
+                        UInt32 blue = pixelColor & format.Bmask;
+                        //UInt32 alpha = pixelColor & format.Amask
+                        UInt32 alpha = 0x000000ff;
+
+                        UInt32 redWithShift = red << 24;
+                        UInt32 greenWithShift = green << 8;
+                        UInt32 blueWithShift = blue >> 8;
+
+                        pixelColor = redWithShift;
+                        pixelColor |= greenWithShift;
+                        pixelColor |= blueWithShift;
+                        pixelColor |= alpha;
+
+                        pixels.Add(pixelColor);
                     }
                 }
             }
-                
+
             return pixels;
         }
     }
 }
-//var pointer = (UInt32*)surfaceDebug.pixels.ToPointer();
-//UInt32 first = pointer[0];
