@@ -41,7 +41,7 @@ namespace RaycastEngine
             {
                 Console.WriteLine($"There was an issue creating the renderer. {SDL.SDL_GetError()}");
             }
-            SDL.SDL_SetWindowGrab(window, SDL.SDL_bool.SDL_TRUE);
+            SDL.SDL_SetRelativeMouseMode(SDL.SDL_bool.SDL_TRUE);
             SDL.SDL_WarpMouseInWindow(window, width / 2, height / 2);
         }
 

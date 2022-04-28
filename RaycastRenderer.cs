@@ -67,6 +67,7 @@ namespace RaycastEngine
             for (int i = 0; i < 8; i++) texture[i] = Enumerable.Repeat(0u, windowHeight * windowWight).ToList();
 
             //Choose between generated textures and Wolfenstein 3D textures here
+            
             //LoadGeneratedTexures();
             LoadTexures();
             
@@ -77,7 +78,7 @@ namespace RaycastEngine
 
             float moveSpeed = frameTime * 0.3f; //the constant value is in squares/second
             float rotSpeed = frameTime * 0.1f;//the constant value is in radians/second
-            float mrotSpeed = frameTime * 0.025f;//the constant value is in radians/second
+            float mrotSpeed = frameTime * 0.005f;//the constant value is in radians/second
             SDL.SDL_GetMouseState(out int mCamPosX, out int mCamPosY);
             float oldMousePos = mCamPosX;
 
@@ -174,8 +175,7 @@ namespace RaycastEngine
                 }
 
                 //Now render the texture target to our screen, but upside down
-                //SDL.SDL_RenderClear(renderer);
-
+                
                 if (SDL.SDL_RenderCopyEx(renderer, frameTexture, IntPtr.Zero, IntPtr.Zero, 0, IntPtr.Zero, SDL.SDL_RendererFlip.SDL_FLIP_NONE) < 0)
                 {
                     Console.WriteLine($"There was an issue with SDL_RenderCopyEx. {SDL.SDL_GetError()}");
@@ -193,7 +193,9 @@ namespace RaycastEngine
                 string messageText = MathF.Round(1.0f / frameCounter).ToString();
                 renderText.Draw(renderer, messageText, 0, 0);
 
+                //setting mouse position in the centre of the screen
                 SDL.SDL_WarpMouseInWindow(window.GetNative(), windowWight / 2, windowHeight / 2);
+
                 // Switches out the currently presented render surface with the one we just did work on.
                 SDL.SDL_RenderPresent(renderer);
             }
@@ -201,9 +203,67 @@ namespace RaycastEngine
             SDL.SDL_Quit();
         }
 
-        private void DrawMap(int windowWight, int windowHeight, Vector2 camDir, Vector2 camPlane,
-                               Vector2 camPos, IntPtr renderer, UInt32[] buffer)
+        private void DrawMap(int windowWight, int windowHeight, Vector2 camDir, Vector2 camPlane, 
+                             Vector2 camPos, IntPtr renderer, UInt32[] buffer)
         {
+            //FLOOR CASTING
+            for (int y = 0; y < windowHeight; y++)
+            {
+                // rayDir for leftmost ray (x = 0) and rightmost ray (x = w)
+                float rayDirX0 = camDir.X - camPlane.X;
+                float rayDirY0 = camDir.Y - camPlane.Y;
+                float rayDirX1 = camDir.X + camPlane.X;
+                float rayDirY1 = camDir.Y + camPlane.Y;
+
+                // Current y position compared to the center of the screen (the horizon)
+                int p = y - windowHeight / 2;
+
+                // Vertical position of the camera.
+                float posZ = 0.5f * windowHeight;
+
+                // Horizontal distance from the camera to the floor for the current row.
+                // 0.5 is the z position exactly in the middle between floor and ceiling.
+                float rowDistance = posZ / p;
+
+                // calculate the real world step vector we have to add for each x (parallel to camera plane)
+                // adding step by step avoids multiplications with a weight in the inner loop
+                float floorStepX = rowDistance * (rayDirX1 - rayDirX0) / windowWight;
+                float floorStepY = rowDistance * (rayDirY1 - rayDirY0) / windowWight;
+
+                // real world coordinates of the leftmost column. This will be updated as we step to the right.
+                float floorX = camPos.X + rowDistance * rayDirX0;
+                float floorY = camPos.Y + rowDistance * rayDirY0;
+
+                for (int x = 0; x < windowWight; ++x)
+                {
+                    // the cell coord is simply got from the integer parts of floorX and floorY
+                    int cellX = (int)(floorX);
+                    int cellY = (int)(floorY);
+
+                    // get the texture coordinate from the fractional part
+                    int tx = (int)(texWidth * (floorX - cellX)) & (texWidth - 1);
+                    int ty = (int)(texHeight * (floorY - cellY)) & (texHeight - 1);
+
+                    floorX += floorStepX;
+                    floorY += floorStepY;
+
+                    // choose texture and draw the pixel
+                    int floorTexture = 3;
+                    int ceilingTexture = 6;
+                    UInt32 color;
+
+                    // floor
+                    color = texture[floorTexture][texWidth * ty + tx];
+                    //color = (color >> 1) & 8355711; // make a bit darker
+                    buffer[y * windowWight + x] = color;
+
+                    //ceiling (symmetrical, at screenHeight - y - 1 instead of y)
+                    color = texture[ceilingTexture][texWidth * ty + tx];
+                    //color = (color >> 1) & 8355711; // make a bit darker
+                    buffer[(windowHeight - y - 1) * windowWight + x] = color;
+                }
+            }
+            //WALL CASTING
             for (int x = 0; x < windowWight; x++)
             {
                 //calculate ray position and direction
@@ -325,6 +385,7 @@ namespace RaycastEngine
             float oldCamDirX = camDir.X;
             camDir.X = camDir.X * MathF.Cos(rotSpeed) - camDir.Y * MathF.Sin(rotSpeed);
             camDir.Y = oldCamDirX * MathF.Sin(rotSpeed) + camDir.Y * MathF.Cos(rotSpeed);
+            
             float oldCamPlaneX = camPlane.X;
             camPlane.X = camPlane.X * MathF.Cos(rotSpeed) - camPlane.Y * MathF.Sin(rotSpeed);
             camPlane.Y = oldCamPlaneX * MathF.Sin(rotSpeed) + camPlane.Y * MathF.Cos(rotSpeed);
@@ -365,12 +426,12 @@ namespace RaycastEngine
                     }
                 }
             }
-
             return pixels;
         }
         private List<uint>[] LoadGeneratedTexures()
         {
-            for (int i = 0; i < 8; i++) texture[i] = Enumerable.Repeat(0u, window.GetHeight() * window.GetWight()).ToList();
+            for (int i = 0; i < 8; i++) 
+                texture[i] = Enumerable.Repeat(0u, window.GetHeight() * window.GetWight()).ToList();
 
             for (int x = 0; x < texWidth; x++)
             {
@@ -379,6 +440,7 @@ namespace RaycastEngine
                     int xorcolor = (x * 256 / texWidth) ^ (y * 256 / texHeight);
                     int ycolor = y * 256 / texWidth;
                     int xycolor = y * 128 / texHeight + x * 128 / texWidth;
+
                     texture[0][texWidth * y + x] = 65536 * 254 * Convert.ToUInt32(x != y && x != texWidth - y); //flat red texture with black cross
                     texture[1][texWidth * y + x] = (UInt32)(xycolor + 256 * xycolor + 65536 * xycolor); //sloped greyscale
                     texture[2][texWidth * y + x] = (UInt32)(256 * xycolor + 65536 * xycolor); //sloped yellow gradient
@@ -389,12 +451,13 @@ namespace RaycastEngine
                     texture[7][texWidth * y + x] = 128 + 256 * 128 + 65536 * 128; //flat grey texture
                 }
             }
-        return texture;
+            return texture;
         }
 
         private List<uint>[] LoadTexures()
         {
-            for (int i = 0; i < 8; i++) texture[i] = Enumerable.Repeat(0u, window.GetHeight() * window.GetWight()).ToList();
+            for (int i = 0; i < 8; i++)
+                texture[i] = Enumerable.Repeat(0u, window.GetHeight() * window.GetWight()).ToList();
 
             texture[0] = GetTexturePixels(path + "/res/pics/eagle.png");
             texture[1] = GetTexturePixels(path + "/res/pics/redbrick.png");
