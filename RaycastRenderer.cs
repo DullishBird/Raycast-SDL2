@@ -16,9 +16,30 @@ namespace RaycastEngine
         private WorldMap worldMap;
         int texWidth = 64;
         int texHeight = 64;
-        List<UInt32>[] texture = new List<UInt32>[8];
+        List<UInt32>[] texture = new List<UInt32>[11];
         Window window = new Window("SDL .NET 6 Tutorial", 640, 480);
 
+        struct Sprite 
+        {
+            public double x;
+            public double y;
+            public int texture;
+            public int uDiv;
+            public int vDiv;
+            public float vMove;
+            public Sprite(double x_, double y_, int texture_, int uDiv_ = 1, int vDiv_ = 1, float vMove_ = 0.0f)
+            {
+                x = x_;
+                y = y_;
+                texture = texture_;
+                uDiv = uDiv_;
+                vDiv = vDiv_;
+                vMove = vMove_;
+            }
+        }
+
+        static int numSprites = 19;
+                
         public RaycastRenderer()
         {
             path = Environment.CurrentDirectory;
@@ -49,6 +70,36 @@ namespace RaycastEngine
                 Console.WriteLine($"There was an issue initilizing SDL_ttf. {SDL_ttf.TTF_GetError()}");
             }
 
+            Sprite[] sprite = new Sprite[] 
+            {
+                //green light in front of playerstart
+                new Sprite (20.5, 11.5, 10), 
+              
+                  //green lights in every room
+                new Sprite (18.5,4.5, 10),
+                new Sprite (10.0,4.5, 10),
+                new Sprite (10.0,12.5,10),
+                new Sprite (3.5, 6.5, 10),
+                new Sprite (3.5, 20.5,10),
+                new Sprite (3.5, 14.5,10),
+                new Sprite (14.5,20.5,10),
+
+                //row of pillars in front of wall: fisheye test
+                new Sprite (18.5, 10.5, 9),
+                new Sprite (18.5, 11.5, 9),
+                new Sprite (18.5, 12.5, 9),
+
+                //some barrels around the map
+                new Sprite (21.5, 1.5, 8, 2, 2, 128.0f),
+                new Sprite (15.5, 1.5, 8, 2, 2, 128.0f),
+                new Sprite (16.0, 1.8, 8, 2, 2, 128.0f),
+                new Sprite (16.2, 1.2, 8, 2, 2, 128.0f),
+                new Sprite (3.5,  2.5, 8, 2, 2, 128.0f),
+                new Sprite (9.5, 15.5, 8, 2, 2, 128.0f),
+                new Sprite (10.0, 15.1,8, 2, 2, 128.0f),
+                new Sprite (10.5, 15.8,8, 2, 2, 128.0f)
+            };
+
             //Window window = new Window("SDL .NET 6 Tutorial", 640, 480);
             RenderText renderText = new RenderText();
 
@@ -62,9 +113,15 @@ namespace RaycastEngine
             var windowHeight = window.GetHeight();
 
             UInt32[] buffer = new UInt32[windowHeight * windowWight];
+            
+            //1D Zbuffer
+            double[] ZBuffer = new double[windowWight];
 
+            //arrays used to sort the sprites
+            int[] spriteOrder = new int[numSprites];
+            double[] spriteDistance = new double[numSprites];
 
-            for (int i = 0; i < 8; i++) texture[i] = Enumerable.Repeat(0u, windowHeight * windowWight).ToList();
+            for (int i = 0; i < 11; i++) texture[i] = Enumerable.Repeat(0u, windowHeight * windowWight).ToList();
 
             //Choose between generated textures and Wolfenstein 3D textures here
             
@@ -147,7 +204,11 @@ namespace RaycastEngine
                         camPlane,
                         camPos,
                         renderer,
-                        buffer);
+                        buffer,
+                        ZBuffer,
+                        spriteOrder,
+                        spriteDistance,
+                        sprite);
 
                 IntPtr frameTexture = IntPtr.Zero;
 
@@ -204,7 +265,8 @@ namespace RaycastEngine
         }
 
         private void DrawMap(int windowWight, int windowHeight, Vector2 camDir, Vector2 camPlane, 
-                             Vector2 camPos, IntPtr renderer, UInt32[] buffer)
+                             Vector2 camPos, IntPtr renderer, UInt32[] buffer, double[] ZBuffer,
+                             int[] spriteOrder, double[] spriteDistance, Sprite[] sprite)
         {
             //FLOOR CASTING
             for (int y = 0; y < windowHeight; y++)
@@ -377,6 +439,79 @@ namespace RaycastEngine
 
                     buffer[y * windowWight + x] = color;
                 }
+                ZBuffer[x] = perpWallDist;
+            }
+            //SPRITE CASTING
+            //sort sprites from far to close
+            for (int i = 0; i < numSprites; i++)
+            {
+                spriteOrder[i] = i;
+                spriteDistance[i] = ((camPos.X - sprite[i].x) * (camPos.X - sprite[i].x) + (camPos.Y - sprite[i].y) * (camPos.Y - sprite[i].y)); //sqrt not taken, unneeded
+            }
+            SortSprites(spriteOrder, spriteDistance);
+
+            //after sorting the sprites, do the projection and draw them
+            for (int i = 0; i < numSprites; i++)
+            {
+                //translate sprite position to relative to camera
+                double spriteX = sprite[spriteOrder[i]].x - camPos.X;
+                double spriteY = sprite[spriteOrder[i]].y - camPos.Y;
+
+                //transform sprite with the inverse camera matrix
+                // [ planeX   dirX ] -1                                       [ dirY      -dirX ]
+                // [               ]       =  1/(planeX*dirY-dirX*planeY) *   [                 ]
+                // [ planeY   dirY ]                                          [ -planeY  planeX ]
+
+                double invDet = 1.0 / (camPlane.X * camDir.Y - camDir.X * camPlane.Y); //required for correct matrix multiplication
+
+                double transformX = invDet * (camDir.Y * spriteX - camDir.X * spriteY);
+                double transformY = invDet * (-camPlane.Y * spriteX + camPlane.X * spriteY); //this is actually the depth inside the screen, that what Z is in 3D
+
+                int spriteScreenX = (int)((windowWight / 2) * (1 + transformX / transformY));
+
+                //parameters for scaling and moving the sprites
+                //int uDiv = 1;
+                //int vDiv = 1;
+                //float vMove = sprite[vMove];
+
+                
+                int vMoveScreen = (int)(sprite[spriteOrder[i]].vMove / transformY);
+                //calculate height of the sprite on screen
+                int spriteHeight = Math.Abs((int)(windowHeight / (transformY))) / sprite[spriteOrder[i]].vDiv; //using 'transformY' instead of the real distance prevents fisheye
+                //calculate lowest and highest pixel to fill in current stripe
+                
+                int drawStartY = -spriteHeight / 2 + windowHeight / 2 + vMoveScreen;
+                if (drawStartY < 0) drawStartY = 0;
+                int drawEndY = spriteHeight / 2 + windowHeight / 2 + vMoveScreen;
+                if (drawEndY >= windowHeight) drawEndY = windowHeight - 1;
+
+                //calculate width of the sprite
+                int spriteWidth = Math.Abs((int)(windowHeight / (transformY))) / sprite[spriteOrder[i]].uDiv;
+                int drawStartX = -spriteWidth / 2 + spriteScreenX;
+                if (drawStartX < 0) drawStartX = 0;
+                int drawEndX = spriteWidth / 2 + spriteScreenX;
+                if (drawEndX >= windowWight) drawEndX = windowWight - 1;
+
+                //loop through every vertical stripe of the sprite on screen
+                for (int stripe = drawStartX; stripe < drawEndX; stripe++)
+                {
+                    int texX = (int)(256 * (stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth) / 256;
+                    if (texX < 0) texX = 0; //костыль
+                    //the conditions in the if are:
+                    //1) it's in front of camera plane so you don't see things behind you
+                    //2) it's on the screen (left)
+                    //3) it's on the screen (right)
+                    //4) ZBuffer, with perpendicular distance
+                    if (transformY > 0 && stripe > 0 && stripe < windowWight && transformY < ZBuffer[stripe])
+                        for (int y = drawStartY; y < drawEndY; y++) //for every pixel of the current stripe
+                        {
+                            int d = (y - vMoveScreen) * 256 - windowHeight * 128 + spriteHeight * 128; //256 and 128 factors to avoid floats
+                            int texY = ((d * texHeight) / spriteHeight) / 256;
+                            if (texY < 0) texY = 0; //тут тоже
+                            UInt32 color = texture[sprite[spriteOrder[i]].texture][texWidth * texY + texX]; //get current color from the texture
+                            if ((color & 0xFFFFFF00) != 0) buffer[y * windowWight + stripe] = color; //paint pixel if it isn't black, black is the invisible color
+                        }
+                }
             }
         }
 
@@ -458,7 +593,7 @@ namespace RaycastEngine
         {
             for (int i = 0; i < 8; i++)
                 texture[i] = Enumerable.Repeat(0u, window.GetHeight() * window.GetWight()).ToList();
-
+            //load textures
             texture[0] = GetTexturePixels(path + "/res/pics/eagle.png");
             texture[1] = GetTexturePixels(path + "/res/pics/redbrick.png");
             texture[2] = GetTexturePixels(path + "/res/pics/purplestone.png");
@@ -467,7 +602,18 @@ namespace RaycastEngine
             texture[5] = GetTexturePixels(path + "/res/pics/mossy.png");
             texture[6] = GetTexturePixels(path + "/res/pics/wood.png");
             texture[7] = GetTexturePixels(path + "/res/pics/colorstone.png");
+            //load sprites
+            texture[8] = GetTexturePixels(path + "/res/pics/barrel.png");
+            texture[9] = GetTexturePixels(path + "/res/pics/pillar.png");
+            texture[10] = GetTexturePixels(path + "/res/pics/greenlight.png");
             return texture;
         }
-    }
+
+        public void SortSprites(int[] spriteOrder, double[] spriteDistance)
+        {
+            Array.Sort(spriteDistance, spriteOrder);
+            Array.Reverse(spriteOrder);
+            Array.Reverse(spriteDistance);
+        }
+    }   
 }
