@@ -14,8 +14,10 @@ namespace RaycastEngine
     {
         private string path = "";
         private WorldMap worldMap;
+
         int texWidth = 64;
         int texHeight = 64;
+
         List<UInt32>[] texture = new List<UInt32>[11];
         Window window = new Window("SDL .NET 6 Tutorial", 640, 480);
 
@@ -27,6 +29,7 @@ namespace RaycastEngine
             public int uDiv;
             public int vDiv;
             public float vMove;
+
             public Sprite(double x_, double y_, int texture_, int uDiv_ = 1, int vDiv_ = 1, float vMove_ = 0.0f)
             {
                 x = x_;
@@ -138,6 +141,7 @@ namespace RaycastEngine
             float moveSpeed = frameTime * 0.3f; //the constant value is in squares/second
             float rotSpeed = frameTime * 0.1f;//the constant value is in radians/second
             float mrotSpeed = frameTime * 0.005f;//the constant value is in radians/second
+
             SDL.SDL_GetMouseState(out int mCamPosX, out int mCamPosY);
             float oldMousePosX = mCamPosX;
             float oldMousePosY = mCamPosY;
@@ -157,7 +161,9 @@ namespace RaycastEngine
                             {
                                 int mouseCamPosX = e.motion.x;
                                 int mouseCamPosY = e.motion.y;
+
                                 pitch += (oldMousePosY - mouseCamPosY) * moveSpeed;
+
                                 if (pitch > 200) pitch = 200;
                                 if (pitch < -200) pitch = -200;
 
@@ -165,10 +171,9 @@ namespace RaycastEngine
                                 Rotating(currentMouseSpeed, ref camDir, ref camPlane);
                                 oldMousePosX = windowWight / 2;
                                 oldMousePosY = windowHeight / 2;
+
                                 break;
                             }
-                            if (pitch > 0) pitch = Math.Max(0, pitch - 100 * moveSpeed);
-                            if (pitch < 0) pitch = Math.Max(0, pitch + 100 * moveSpeed);
 
                         //move forward if no wall in front of you
                         case SDL.SDL_EventType.SDL_KEYDOWN:
