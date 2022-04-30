@@ -59,6 +59,8 @@ namespace RaycastEngine
             Vector2 camDir = new Vector2(-1, 0);
             Vector2 camPos = new Vector2(22, 12);
             Vector2 camPlane = new Vector2(0, 0.66f);
+            float pitch = 0f;
+            float posZ = 0f;
 
             if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO) < 0)
             {
@@ -137,7 +139,8 @@ namespace RaycastEngine
             float rotSpeed = frameTime * 0.1f;//the constant value is in radians/second
             float mrotSpeed = frameTime * 0.005f;//the constant value is in radians/second
             SDL.SDL_GetMouseState(out int mCamPosX, out int mCamPosY);
-            float oldMousePos = mCamPosX;
+            float oldMousePosX = mCamPosX;
+            float oldMousePosY = mCamPosY;
 
             while (running)
             {
@@ -153,11 +156,19 @@ namespace RaycastEngine
                         case SDL.SDL_EventType.SDL_MOUSEMOTION:
                             {
                                 int mouseCamPosX = e.motion.x;
-                                float currentMouseSpeed = mrotSpeed * (oldMousePos - mouseCamPosX);
+                                int mouseCamPosY = e.motion.y;
+                                pitch += (oldMousePosY - mouseCamPosY) * moveSpeed;
+                                if (pitch > 200) pitch = 200;
+                                if (pitch < -200) pitch = -200;
+
+                                float currentMouseSpeed = mrotSpeed * (oldMousePosX - mouseCamPosX);
                                 Rotating(currentMouseSpeed, ref camDir, ref camPlane);
-                                oldMousePos = windowWight / 2;
+                                oldMousePosX = windowWight / 2;
+                                oldMousePosY = windowHeight / 2;
                                 break;
                             }
+                            if (pitch > 0) pitch = Math.Max(0, pitch - 100 * moveSpeed);
+                            if (pitch < 0) pitch = Math.Max(0, pitch + 100 * moveSpeed);
 
                         //move forward if no wall in front of you
                         case SDL.SDL_EventType.SDL_KEYDOWN:
@@ -208,7 +219,7 @@ namespace RaycastEngine
                         ZBuffer,
                         spriteOrder,
                         spriteDistance,
-                        sprite);
+                        sprite, pitch, posZ);
 
                 IntPtr frameTexture = IntPtr.Zero;
 
@@ -226,9 +237,9 @@ namespace RaycastEngine
                         amask = 0x000000ff;
 
                         int depth = 4 * 8,
-                            pitch = windowWight * 4;
+                            pitch_ = windowWight * 4;
 
-                        IntPtr surface = SDL.SDL_CreateRGBSurfaceFrom(bufferIntPtr, windowWight, windowHeight, depth, pitch, rmask, gmask, bmask, amask);
+                        IntPtr surface = SDL.SDL_CreateRGBSurfaceFrom(bufferIntPtr, windowWight, windowHeight, depth, pitch_, rmask, gmask, bmask, amask);
 
                         frameTexture = SDL.SDL_CreateTextureFromSurface(renderer, surface);
                         SDL.SDL_FreeSurface(surface);
@@ -264,13 +275,16 @@ namespace RaycastEngine
             SDL.SDL_Quit();
         }
 
-        private void DrawMap(int windowWight, int windowHeight, Vector2 camDir, Vector2 camPlane, 
+        private void DrawMap(int windowWight, int windowHeight, Vector2 camDir, Vector2 camPlane,
                              Vector2 camPos, IntPtr renderer, UInt32[] buffer, double[] ZBuffer,
-                             int[] spriteOrder, double[] spriteDistance, Sprite[] sprite)
+                             int[] spriteOrder, double[] spriteDistance, Sprite[] sprite, float pitch, float posZ)
         {
             //FLOOR CASTING
             for (int y = 0; y < windowHeight; y++)
             {
+                // whether this section is floor or ceiling
+                bool is_floor = y > windowHeight / 2 + pitch;
+                
                 // rayDir for leftmost ray (x = 0) and rightmost ray (x = w)
                 float rayDirX0 = camDir.X - camPlane.X;
                 float rayDirY0 = camDir.Y - camPlane.Y;
@@ -278,14 +292,15 @@ namespace RaycastEngine
                 float rayDirY1 = camDir.Y + camPlane.Y;
 
                 // Current y position compared to the center of the screen (the horizon)
-                int p = y - windowHeight / 2;
+                int p = (int)(is_floor ? (y - windowHeight / 2 - pitch) : (windowHeight / 2 - y + pitch));
 
                 // Vertical position of the camera.
-                float posZ = 0.5f * windowHeight;
+                float camZ = (float)(is_floor ? (0.5 * windowHeight + posZ) : (0.5 * windowHeight - posZ));
+                //float posZ = 0.5f * windowHeight;
 
                 // Horizontal distance from the camera to the floor for the current row.
                 // 0.5 is the z position exactly in the middle between floor and ceiling.
-                float rowDistance = posZ / p;
+                float rowDistance = camZ / p;
 
                 // calculate the real world step vector we have to add for each x (parallel to camera plane)
                 // adding step by step avoids multiplications with a weight in the inner loop
@@ -314,15 +329,21 @@ namespace RaycastEngine
                     int ceilingTexture = 6;
                     UInt32 color;
 
-                    // floor
-                    color = texture[floorTexture][texWidth * ty + tx];
-                    //color = (color >> 1) & 8355711; // make a bit darker
-                    buffer[y * windowWight + x] = color;
-
-                    //ceiling (symmetrical, at screenHeight - y - 1 instead of y)
-                    color = texture[ceilingTexture][texWidth * ty + tx];
-                    //color = (color >> 1) & 8355711; // make a bit darker
-                    buffer[(windowHeight - y - 1) * windowWight + x] = color;
+                    if (is_floor)
+                    {
+                        // floor
+                        color = texture[floorTexture][texWidth * ty + tx];
+                        //color = (color >> 1) & 8355711; // make a bit darker
+                        buffer[y * windowWight + x] = color;
+                    }
+                    else
+                    {
+                        //ceiling (symmetrical, at screenHeight - y - 1 instead of y)
+                        color = texture[ceilingTexture][texWidth * ty + tx];
+                        //color = (color >> 1) & 8355711; // make a bit darker
+                        buffer[y * windowWight + x] = color;
+                        //buffer[(windowHeight - y - 1) * windowWight + x] = color;
+                    }
                 }
             }
             //WALL CASTING
@@ -397,16 +418,16 @@ namespace RaycastEngine
                 }
 
                 if (side == 0) perpWallDist = (sideDistX - deltaDistX);
-                else perpWallDist = (sideDistY - deltaDistY);
+                else           perpWallDist = (sideDistY - deltaDistY);
 
                 //Calculate height of line to draw on screen
                 int lineHeight = (int)(windowHeight / perpWallDist);
 
                 //calculate lowest and highest pixel to fill in current stripe
-                int drawStart = -lineHeight / 2 + windowHeight / 2;
+                int drawStart = (int)(-lineHeight / 2 + windowHeight / 2 + pitch + (posZ / perpWallDist));
                 if (drawStart < 0) drawStart = 0;
 
-                int drawEnd = lineHeight / 2 + windowHeight / 2;
+                int drawEnd = (int)(lineHeight / 2 + windowHeight / 2 + pitch + (posZ / perpWallDist));
                 if (drawEnd >= windowHeight) drawEnd = windowHeight - 1;
                 //texturing calculations
                 int texNum = worldMap.GetWallType(mapX, mapY) - 1; //1 subtracted from it so that texture 0 can be used!
@@ -427,7 +448,7 @@ namespace RaycastEngine
                 // How much to increase the texture coordinate per screen pixel
                 double step = 1.0 * texHeight / lineHeight;
                 // Starting texture coordinate
-                double texPos = (drawStart - windowHeight / 2 + lineHeight / 2) * step;
+                double texPos = (drawStart - pitch - (posZ / perpWallDist) - windowHeight / 2 + lineHeight / 2) * step;
                 for (int y = drawStart; y < drawEnd; y++)
                 {
                     // Cast the texture coordinate to integer, and mask with (texHeight - 1) in case of overflow
@@ -475,7 +496,7 @@ namespace RaycastEngine
                 //float vMove = sprite[vMove];
 
                 
-                int vMoveScreen = (int)(sprite[spriteOrder[i]].vMove / transformY);
+                int vMoveScreen = (int)((sprite[spriteOrder[i]].vMove / transformY) + pitch + posZ / transformY);
                 //calculate height of the sprite on screen
                 int spriteHeight = Math.Abs((int)(windowHeight / (transformY))) / sprite[spriteOrder[i]].vDiv; //using 'transformY' instead of the real distance prevents fisheye
                 //calculate lowest and highest pixel to fill in current stripe
