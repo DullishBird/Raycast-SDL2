@@ -139,9 +139,12 @@ namespace RaycastEngine
             float frameTime = (time - oldTime) / 1000.0f; //frameTime is the time this frame has taken, in seconds
 
             float moveSpeed = frameTime * 0.3f; //the constant value is in squares/second
+            float vertMoveSpeed = frameTime * 1.0f; //vertical cam movement
             float rotSpeed = frameTime * 0.1f;//the constant value is in radians/second
             float mrotSpeed = frameTime * 0.005f;//the constant value is in radians/second
-
+            
+            
+            
             SDL.SDL_GetMouseState(out int mCamPosX, out int mCamPosY);
             float oldMousePosX = mCamPosX;
             float oldMousePosY = mCamPosY;
@@ -151,6 +154,7 @@ namespace RaycastEngine
                 // Check to see if there are any events and continue to do so until the queue is empty.
                 while (SDL.SDL_PollEvent(out SDL.SDL_Event e) == 1)
                 {
+                    
                     switch (e.type)
                     {
                         case SDL.SDL_EventType.SDL_QUIT:
@@ -162,7 +166,7 @@ namespace RaycastEngine
                                 int mouseCamPosX = e.motion.x;
                                 int mouseCamPosY = e.motion.y;
 
-                                pitch += (oldMousePosY - mouseCamPosY) * moveSpeed;
+                                pitch += (oldMousePosY - mouseCamPosY) * vertMoveSpeed;
 
                                 if (pitch > 200) pitch = 200;
                                 if (pitch < -200) pitch = -200;
@@ -174,40 +178,53 @@ namespace RaycastEngine
 
                                 break;
                             }
-
-                        //move forward if no wall in front of you
-                        case SDL.SDL_EventType.SDL_KEYDOWN:
-                            if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_ESCAPE)
-                            {
-                                running = false;
-                                break;
-                            }
-
-                            if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_w)
-                            {
-                                if (worldMap.GetWallType((int)(camPos.X + camDir.X * moveSpeed), (int)camPos.Y) == 0) camPos.X += camDir.X * moveSpeed;
-                                if (worldMap.GetWallType((int)camPos.X, (int)(camPos.Y + camDir.Y * moveSpeed)) == 0) camPos.Y += camDir.Y * moveSpeed;
-                            }
-                            //move backwards if no wall behind you
-                            if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_s)
-                            {
-                                if (worldMap.GetWallType((int)(camPos.X - camDir.X * moveSpeed), (int)camPos.Y) == 0) camPos.X -= camDir.X * moveSpeed;
-                                if (worldMap.GetWallType((int)(camPos.X), (int)(camPos.Y - camDir.Y * moveSpeed)) == 0) camPos.Y -= camDir.Y * moveSpeed;
-                            }
-                            //both camera direction and camera plane must be rotated
-                            if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_d)
-                            {
-                                Rotating(-rotSpeed, ref camDir, ref camPlane);
-                            }
-
-                            if (e.key.keysym.sym == SDL.SDL_Keycode.SDLK_a)
-                            {
-                                Rotating(rotSpeed, ref camDir, ref camPlane);
-                            }
-                            break;
                     }
 
                 }
+                IntPtr keysPtr = SDL.SDL_GetKeyboardState(out int numkeys);
+                byte[] keyState = new byte[numkeys];
+                Marshal.Copy(keysPtr, keyState, 0, numkeys);
+
+                if (keyState[(int)SDL.SDL_Scancode.SDL_SCANCODE_ESCAPE] == 1)
+                {
+                    running = false;
+                    break;
+                }
+
+                if (keyState[(int)SDL.SDL_Scancode.SDL_SCANCODE_W] == 1)
+                {
+                    if (worldMap.GetWallType((int)(camPos.X + camDir.X * moveSpeed), (int)camPos.Y) == 0) camPos.X += camDir.X * moveSpeed;
+                    if (worldMap.GetWallType((int)camPos.X, (int)(camPos.Y + camDir.Y * moveSpeed)) == 0) camPos.Y += camDir.Y * moveSpeed;
+                }
+
+                if (keyState[(int)SDL.SDL_Scancode.SDL_SCANCODE_S] == 1)
+                {
+                    if (worldMap.GetWallType((int)(camPos.X - camDir.X * moveSpeed), (int)camPos.Y) == 0) camPos.X -= camDir.X * moveSpeed;
+                    if (worldMap.GetWallType((int)(camPos.X), (int)(camPos.Y - camDir.Y * moveSpeed)) == 0) camPos.Y -= camDir.Y * moveSpeed;
+                }
+
+                if (keyState[(int)SDL.SDL_Scancode.SDL_SCANCODE_A] == 1)
+                {
+                    if (worldMap.GetWallType((int)(camPos.X - camPlane.X * moveSpeed), (int)camPos.Y) == 0) camPos.X -= camPlane.X * moveSpeed;
+                    if (worldMap.GetWallType((int)camPos.X, (int)(camPos.Y - camPlane.Y * moveSpeed)) == 0) camPos.Y -= camPlane.Y * moveSpeed;
+                }
+
+                if (keyState[(int)SDL.SDL_Scancode.SDL_SCANCODE_D] == 1)
+                {
+                    if (worldMap.GetWallType((int)(camPos.X + camPlane.X * moveSpeed), (int)camPos.Y) == 0) camPos.X += camPlane.X * moveSpeed;
+                    if (worldMap.GetWallType((int)camPos.X, (int)(camPos.Y + camPlane.Y * moveSpeed)) == 0) camPos.Y += camPlane.Y * moveSpeed;
+                }
+
+                if (keyState[(int)SDL.SDL_Scancode.SDL_SCANCODE_Q] == 1)
+                {
+                    Rotating(rotSpeed, ref camDir, ref camPlane);
+                }
+
+                if (keyState[(int)SDL.SDL_Scancode.SDL_SCANCODE_E] == 1)
+                {
+                    Rotating(-rotSpeed, ref camDir, ref camPlane);
+                }
+
                 SDL.SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
                 if (SDL.SDL_RenderClear(renderer) < 0)
                 {
@@ -347,7 +364,6 @@ namespace RaycastEngine
                         color = texture[ceilingTexture][texWidth * ty + tx];
                         //color = (color >> 1) & 8355711; // make a bit darker
                         buffer[y * windowWight + x] = color;
-                        //buffer[(windowHeight - y - 1) * windowWight + x] = color;
                     }
                 }
             }
