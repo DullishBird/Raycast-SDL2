@@ -21,25 +21,25 @@ namespace RaycastEngine
         List<UInt32>[] texture = new List<UInt32>[11];
         Window window = new Window("SDL .NET 6 Tutorial", 640, 480);
 
-        struct Sprite 
-        {
-            public double x;
-            public double y;
-            public int texture;
-            public int uDiv;
-            public int vDiv;
-            public float vMove;
+        //struct Sprite
+        //{
+        //    public double x;
+        //    public double y;
+        //    public int texture;
+        //    public int uDiv;
+        //    public int vDiv;
+        //    public float vMove;
 
-            public Sprite(double x_, double y_, int texture_, int uDiv_ = 1, int vDiv_ = 1, float vMove_ = 0.0f)
-            {
-                x = x_;
-                y = y_;
-                texture = texture_;
-                uDiv = uDiv_;
-                vDiv = vDiv_;
-                vMove = vMove_;
-            }
-        }
+        //    public Sprite(double x_, double y_, int texture_, int uDiv_ = 1, int vDiv_ = 1, float vMove_ = 0.0f)
+        //    {
+        //        x = x_;
+        //        y = y_;
+        //        texture = texture_;
+        //        uDiv = uDiv_;
+        //        vDiv = vDiv_;
+        //        vMove = vMove_;
+        //    }
+        //}
 
         static int numSprites = 19;
                 
@@ -78,32 +78,34 @@ namespace RaycastEngine
             Sprite[] sprite = new Sprite[] 
             {
                 //green light in front of playerstart
-                new Sprite (20.5, 11.5, 10), 
+                new Sprite (new Vector2(20.5f, 11.5f), 10), 
               
                   //green lights in every room
-                new Sprite (18.5,4.5, 10),
-                new Sprite (10.0,4.5, 10),
-                new Sprite (10.0,12.5,10),
-                new Sprite (3.5, 6.5, 10),
-                new Sprite (3.5, 20.5,10),
-                new Sprite (3.5, 14.5,10),
-                new Sprite (14.5,20.5,10),
+                new Sprite (new Vector2(18.5f, 4.5f), 10),
+                new Sprite (new Vector2(10.0f, 4.5f), 10),
+                new Sprite (new Vector2(10.0f, 12.5f),10),
+                new Sprite (new Vector2(3.5f, 6.5f), 10),
+                new Sprite (new Vector2(3.5f, 20.5f), 10),
+                new Sprite (new Vector2(3.5f, 14.5f), 10),
+                new Sprite (new Vector2(14.5f,20.5f), 10),
 
                 //row of pillars in front of wall: fisheye test
-                new Sprite (18.5, 10.5, 9),
-                new Sprite (18.5, 11.5, 9),
-                new Sprite (18.5, 12.5, 9),
+                new Sprite (new Vector2(18.5f, 10.5f), 9),
+                new Sprite (new Vector2(18.5f, 11.5f), 9),
+                new Sprite (new Vector2(18.5f, 12.5f), 9),
 
                 //some barrels around the map
-                new Sprite (21.5, 1.5, 8, 2, 2, 128.0f),
-                new Sprite (15.5, 1.5, 8, 2, 2, 128.0f),
-                new Sprite (16.0, 1.8, 8, 2, 2, 128.0f),
-                new Sprite (16.2, 1.2, 8, 2, 2, 128.0f),
-                new Sprite (3.5,  2.5, 8, 2, 2, 128.0f),
-                new Sprite (9.5, 15.5, 8, 2, 2, 128.0f),
-                new Sprite (10.0, 15.1,8, 2, 2, 128.0f),
-                new Sprite (10.5, 15.8,8, 2, 2, 128.0f)
+                new Sprite (new Vector2(21.5f, 1.5f), 8, 2, 2, 128.0f),
+                new Sprite (new Vector2(15.5f, 1.5f), 8, 2, 2, 128.0f),
+                new Sprite (new Vector2(16.0f, 1.8f), 8, 2, 2, 128.0f),
+                new Sprite (new Vector2(16.2f, 1.2f), 8, 2, 2, 128.0f),
+                new Sprite (new Vector2(3.5f, 2.5f), 8, 2, 2, 128.0f),
+                new Sprite (new Vector2(9.5f, 15.5f), 8, 2, 2, 128.0f),
+                new Sprite (new Vector2(10.0f, 15.1f), 8, 2, 2, 128.0f),
+                new Sprite (new Vector2(10.5f, 15.8f), 8, 2, 2, 128.0f)
             };
+            
+            
 
             //Window window = new Window("SDL .NET 6 Tutorial", 640, 480);
             RenderText renderText = new RenderText();
@@ -487,73 +489,14 @@ namespace RaycastEngine
             //sort sprites from far to close
             for (int i = 0; i < numSprites; i++)
             {
-                spriteOrder[i] = i;
-                spriteDistance[i] = ((camPos.X - sprite[i].x) * (camPos.X - sprite[i].x) + (camPos.Y - sprite[i].y) * (camPos.Y - sprite[i].y)); //sqrt not taken, unneeded
+                spriteDistance[i] = ((camPos.X - sprite[i].Position.X) * (camPos.X - sprite[i].Position.X) + (camPos.Y - sprite[i].Position.Y) * (camPos.Y - sprite[i].Position.Y)); //sqrt not taken, unneeded
             }
-            SortSprites(spriteOrder, spriteDistance);
-
+            SortSprites(sprite, spriteDistance);
+            
             //after sorting the sprites, do the projection and draw them
             for (int i = 0; i < numSprites; i++)
             {
-                //translate sprite position to relative to camera
-                double spriteX = sprite[spriteOrder[i]].x - camPos.X;
-                double spriteY = sprite[spriteOrder[i]].y - camPos.Y;
-
-                //transform sprite with the inverse camera matrix
-                // [ planeX   dirX ] -1                                       [ dirY      -dirX ]
-                // [               ]       =  1/(planeX*dirY-dirX*planeY) *   [                 ]
-                // [ planeY   dirY ]                                          [ -planeY  planeX ]
-
-                double invDet = 1.0 / (camPlane.X * camDir.Y - camDir.X * camPlane.Y); //required for correct matrix multiplication
-
-                double transformX = invDet * (camDir.Y * spriteX - camDir.X * spriteY);
-                double transformY = invDet * (-camPlane.Y * spriteX + camPlane.X * spriteY); //this is actually the depth inside the screen, that what Z is in 3D
-
-                int spriteScreenX = (int)((windowWight / 2) * (1 + transformX / transformY));
-
-                //parameters for scaling and moving the sprites
-                //int uDiv = 1;
-                //int vDiv = 1;
-                //float vMove = sprite[vMove];
-
-                
-                int vMoveScreen = (int)((sprite[spriteOrder[i]].vMove / transformY) + pitch + posZ / transformY);
-                //calculate height of the sprite on screen
-                int spriteHeight = Math.Abs((int)(windowHeight / (transformY))) / sprite[spriteOrder[i]].vDiv; //using 'transformY' instead of the real distance prevents fisheye
-                //calculate lowest and highest pixel to fill in current stripe
-                
-                int drawStartY = -spriteHeight / 2 + windowHeight / 2 + vMoveScreen;
-                if (drawStartY < 0) drawStartY = 0;
-                int drawEndY = spriteHeight / 2 + windowHeight / 2 + vMoveScreen;
-                if (drawEndY >= windowHeight) drawEndY = windowHeight - 1;
-
-                //calculate width of the sprite
-                int spriteWidth = Math.Abs((int)(windowHeight / (transformY))) / sprite[spriteOrder[i]].uDiv;
-                int drawStartX = -spriteWidth / 2 + spriteScreenX;
-                if (drawStartX < 0) drawStartX = 0;
-                int drawEndX = spriteWidth / 2 + spriteScreenX;
-                if (drawEndX >= windowWight) drawEndX = windowWight - 1;
-
-                //loop through every vertical stripe of the sprite on screen
-                for (int stripe = drawStartX; stripe < drawEndX; stripe++)
-                {
-                    int texX = (int)(256 * (stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth) / 256;
-                    if (texX < 0) texX = 0; //костыль
-                    //the conditions in the if are:
-                    //1) it's in front of camera plane so you don't see things behind you
-                    //2) it's on the screen (left)
-                    //3) it's on the screen (right)
-                    //4) ZBuffer, with perpendicular distance
-                    if (transformY > 0 && stripe > 0 && stripe < windowWight && transformY < ZBuffer[stripe])
-                        for (int y = drawStartY; y < drawEndY; y++) //for every pixel of the current stripe
-                        {
-                            int d = (y - vMoveScreen) * 256 - windowHeight * 128 + spriteHeight * 128; //256 and 128 factors to avoid floats
-                            int texY = ((d * texHeight) / spriteHeight) / 256;
-                            if (texY < 0) texY = 0; //тут тоже
-                            UInt32 color = texture[sprite[spriteOrder[i]].texture][texWidth * texY + texX]; //get current color from the texture
-                            if ((color & 0xFFFFFF00) != 0) buffer[y * windowWight + stripe] = color; //paint pixel if it isn't black, black is the invisible color
-                        }
-                }
+                sprite[i].Draw(camPos, camDir, camPlane, windowWight, windowHeight, pitch, posZ, texWidth, texHeight, buffer, ZBuffer, texture);
             }
         }
 
@@ -651,10 +594,10 @@ namespace RaycastEngine
             return texture;
         }
 
-        public void SortSprites(int[] spriteOrder, double[] spriteDistance)
+        public void SortSprites(Sprite[] sprites, double[] spriteDistance)
         {
-            Array.Sort(spriteDistance, spriteOrder);
-            Array.Reverse(spriteOrder);
+            Array.Sort(spriteDistance, sprites);
+            Array.Reverse(sprites);
             Array.Reverse(spriteDistance);
         }
     }   
