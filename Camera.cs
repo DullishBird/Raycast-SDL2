@@ -10,43 +10,31 @@ namespace RaycastEngine
     public class Camera
     {
         private Vector2 dir;
-        public Vector2 Dir
-        {
-            get { return dir; }
-            set { dir = value; }
-        }
-        private Vector2 pos;
-        public Vector2 Pos
-            { get { return pos; } set { pos = value; } }
+        public Vector2 Dir { get { return dir; } set { dir = value; } }
+        private Vector3 pos;
+        public Vector3 Pos { get { return pos; } set { pos = value; } }
         private Vector2 plane;
         public Vector2 Plane { get { return plane; } set { plane = value; } }
-        //private float pitch;
-        //private float posZ;
+        private float pitch;
+        public float Pitch { get { return pitch; } set { pitch = value; } }
 
-        public Camera()
+        public Camera(Vector3 pos_, Vector2 dir_, Vector2 plane_, float pitch_)
         {
-            dir = new Vector2(-1, 0);
-            pos = new Vector2(22, 12);
-            plane = new Vector2(0, 0.66f);
-            //pitch = 0f;
-            //posZ = 0f;
-        }
-        public void ChangeFOV(float fov)
-        {
-            plane.Y = fov;
+            dir = dir_;
+            pos = pos_;
+            plane = plane_;
+            pitch = pitch_;
         }
 
-        public Vector2 GetDir() { return dir; }
-        public Vector2 GetPos() { return pos; }
-        public Vector2 GetPlane() { return plane; }
+        public void Rotate(float rotSpeed)
+        {
+            float oldCamDirX = Dir.X;
+            Dir = new Vector2(Dir.X * MathF.Cos(rotSpeed) - Dir.Y * MathF.Sin(rotSpeed),
+                              oldCamDirX * MathF.Sin(rotSpeed) + Dir.Y * MathF.Cos(rotSpeed));
 
-        //public static implicit operator Vector2(Camera v)
-        //{
-        //    throw new NotImplementedException();
-        //}
-        //public float GetPitch() { return pitch; }
-        //public float GetPosZ() { return posZ; }
-
-
+            float oldCamPlaneX = Plane.X;
+            Plane = new Vector2(Plane.X * MathF.Cos(rotSpeed) - Plane.Y * MathF.Sin(rotSpeed),
+                                oldCamPlaneX * MathF.Sin(rotSpeed) + Plane.Y * MathF.Cos(rotSpeed));
+        }
     }
 }

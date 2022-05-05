@@ -20,26 +20,7 @@ namespace RaycastEngine
 
         List<UInt32>[] texture = new List<UInt32>[11];
         Window window = new Window("SDL .NET 6 Tutorial", 640, 480);
-
-        //struct Sprite
-        //{
-        //    public double x;
-        //    public double y;
-        //    public int texture;
-        //    public int uDiv;
-        //    public int vDiv;
-        //    public float vMove;
-
-        //    public Sprite(double x_, double y_, int texture_, int uDiv_ = 1, int vDiv_ = 1, float vMove_ = 0.0f)
-        //    {
-        //        x = x_;
-        //        y = y_;
-        //        texture = texture_;
-        //        uDiv = uDiv_;
-        //        vDiv = vDiv_;
-        //        vMove = vMove_;
-        //    }
-        //}
+        Camera camera = new Camera(new Vector3(22, 12, 0),new Vector2(-1, 0), new Vector2(0, 0.66f), 0f);
 
         static int numSprites = 19;
                 
@@ -59,14 +40,6 @@ namespace RaycastEngine
         {
             float time = 0; //time of current frame
             float oldTime = 0; //time of previous frame
-            //Vector2 camDir = new Vector2(-1, 0);
-            //Vector2 camPos = new Vector2(22, 12);
-            //Vector2 camPlane = new Vector2(0, 0.60f);
-            float pitch = 0f;
-            float posZ = 0f;
-            Camera camera = new Camera();
-
-            camera.ChangeFOV(1f);
 
             if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO) < 0)
             {
@@ -171,14 +144,13 @@ namespace RaycastEngine
                                 int mouseCamPosX = e.motion.x;
                                 int mouseCamPosY = e.motion.y;
 
-                                pitch += (oldMousePosY - mouseCamPosY) * vertMoveSpeed;
+                                camera.Pitch += (oldMousePosY - mouseCamPosY) * vertMoveSpeed;
 
-                                if (pitch > 200) pitch = 200;
-                                if (pitch < -200) pitch = -200;
+                                if (camera.Pitch > 200) camera.Pitch = 200;
+                                if (camera.Pitch < -200) camera.Pitch = -200;
 
                                 float currentMouseSpeed = mrotSpeed * (oldMousePosX - mouseCamPosX);
-                                //Rotating(currentMouseSpeed, ref camera.Dir, ref camera.Plane);
-                                Rotating1(currentMouseSpeed, camera);
+                                camera.Rotate(currentMouseSpeed);
                                 oldMousePosX = windowWight / 2;
                                 oldMousePosY = windowHeight / 2;
 
@@ -199,39 +171,36 @@ namespace RaycastEngine
 
                 if (keyState[(int)SDL.SDL_Scancode.SDL_SCANCODE_W] == 1)
                 {
-                    //if (worldMap.GetWallType((int)(camera.GetPos().X + camera.GetDir().X * moveSpeed), (int)camera.GetPos().Y) == 0) camera.Pos = camera.GetPos(camera.GetPos().X + camera.GetDir().X * moveSpeed, camera.GetPos().Y);
-                    if (worldMap.GetWallType((int)(camera.GetPos().X + camera.GetDir().X * moveSpeed), (int)camera.GetPos().Y) == 0) camera.Pos = new Vector2(camera.GetPos().X + camera.GetDir().X * moveSpeed, camera.GetPos().Y);
-                    if (worldMap.GetWallType((int)camera.GetPos().X, (int)(camera.GetPos().Y + camera.GetDir().Y * moveSpeed)) == 0) camera.Pos = new Vector2(camera.GetPos().X, camera.GetPos().Y + camera.GetDir().Y * moveSpeed);
+                    if (worldMap.GetWallType((int)(camera.Pos.X + camera.Dir.X * moveSpeed), (int)camera.Pos.Y) == 0) camera.Pos = new Vector3(camera.Pos.X + camera.Dir.X * moveSpeed, camera.Pos.Y, camera.Pos.Z);
+                    if (worldMap.GetWallType((int)camera.Pos.X, (int)(camera.Pos.Y + camera.Dir.Y * moveSpeed)) == 0) camera.Pos = new Vector3(camera.Pos.X, camera.Pos.Y + camera.Dir.Y * moveSpeed, camera.Pos.Z);
                 }
 
                 if (keyState[(int)SDL.SDL_Scancode.SDL_SCANCODE_S] == 1)
                 {
-                    if (worldMap.GetWallType((int)(camera.GetPos().X - camera.GetDir().X * moveSpeed), (int)camera.GetPos().Y) == 0) camera.Pos = new Vector2(camera.GetPos().X - camera.GetDir().X * moveSpeed, camera.GetPos().Y);
-                    if (worldMap.GetWallType((int)camera.GetPos().X, (int)(camera.GetPos().Y - camera.GetDir().Y * moveSpeed)) == 0) camera.Pos = new Vector2(camera.GetPos().X, camera.GetPos().Y - camera.GetDir().Y * moveSpeed);
+                    if (worldMap.GetWallType((int)(camera.Pos.X - camera.Dir.X * moveSpeed), (int)camera.Pos.Y) == 0) camera.Pos = new Vector3(camera.Pos.X - camera.Dir.X * moveSpeed, camera.Pos.Y, camera.Pos.Z);
+                    if (worldMap.GetWallType((int)camera.Pos.X, (int)(camera.Pos.Y - camera.Dir.Y * moveSpeed)) == 0) camera.Pos = new Vector3(camera.Pos.X, camera.Pos.Y - camera.Dir.Y * moveSpeed, camera.Pos.Z);
                 }
 
                 if (keyState[(int)SDL.SDL_Scancode.SDL_SCANCODE_A] == 1)
                 {
-                    if (worldMap.GetWallType((int)(camera.GetPos().X - camera.GetPlane().X * moveSpeed), (int)camera.GetPos().Y) == 0) camera.Pos = new Vector2(camera.GetPos().X - camera.GetPlane().X * moveSpeed, camera.GetPos().Y);
-                    if (worldMap.GetWallType((int)camera.GetPos().X, (int)(camera.GetPos().Y - camera.GetPlane().Y * moveSpeed)) == 0) camera.Pos = new Vector2(camera.GetPos().X, camera.GetPos().Y - camera.GetPlane().Y * moveSpeed);
+                    if (worldMap.GetWallType((int)(camera.Pos.X - camera.Plane.X * moveSpeed), (int)camera.Pos.Y) == 0) camera.Pos = new Vector3(camera.Pos.X - camera.Plane.X * moveSpeed, camera.Pos.Y, camera.Pos.Z);
+                    if (worldMap.GetWallType((int)camera.Pos.X, (int)(camera.Pos.Y - camera.Plane.Y * moveSpeed)) == 0) camera.Pos = new Vector3(camera.Pos.X, camera.Pos.Y - camera.Plane.Y * moveSpeed, camera.Pos.Z);
                 }
 
                 if (keyState[(int)SDL.SDL_Scancode.SDL_SCANCODE_D] == 1)
                 {
-                    if (worldMap.GetWallType((int)(camera.GetPos().X + camera.GetPlane().X * moveSpeed), (int)camera.GetPos().Y) == 0) camera.Pos = new Vector2(camera.GetPos().X + camera.GetPlane().X * moveSpeed, camera.GetPos().Y);
-                    if (worldMap.GetWallType((int)camera.GetPos().X, (int)(camera.GetPos().Y + camera.GetPlane().Y * moveSpeed)) == 0) camera.Pos = new Vector2(camera.GetPos().X, camera.GetPos().Y + camera.GetPlane().Y * moveSpeed);
+                    if (worldMap.GetWallType((int)(camera.Pos.X + camera.Plane.X * moveSpeed), (int)camera.Pos.Y) == 0) camera.Pos = new Vector3(camera.Pos.X + camera.Plane.X * moveSpeed, camera.Pos.Y, camera.Pos.Z);
+                    if (worldMap.GetWallType((int)camera.Pos.X, (int)(camera.Pos.Y + camera.Plane.Y * moveSpeed)) == 0) camera.Pos = new Vector3(camera.Pos.X, camera.Pos.Y + camera.Plane.Y * moveSpeed, camera.Pos.Z);
                 }
 
                 if (keyState[(int)SDL.SDL_Scancode.SDL_SCANCODE_Q] == 1)
                 {
-                    //Rotating(rotSpeed, camera.Dir, camera.Plane);
-                    Rotating1(rotSpeed, camera);
+                    camera.Rotate(rotSpeed);
                 }
 
                 if (keyState[(int)SDL.SDL_Scancode.SDL_SCANCODE_E] == 1)
                 {
-                    //Rotating(-rotSpeed, camera.Dir, camera.Plane);
-                    Rotating1(-rotSpeed, camera);
+                    camera.Rotate(-rotSpeed);
                 }
 
                 SDL.SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -242,15 +211,13 @@ namespace RaycastEngine
 
                 DrawMap(windowWight,
                         windowHeight,
-                        camera.GetDir(),
-                        camera.GetPlane(),
-                        camera.GetPos(),
+                        camera,
                         renderer,
                         buffer,
                         ZBuffer,
                         spriteOrder,
                         spriteDistance,
-                        sprite, pitch, posZ);
+                        sprite);
 
                 IntPtr frameTexture = IntPtr.Zero;
 
@@ -306,10 +273,14 @@ namespace RaycastEngine
             SDL.SDL_Quit();
         }
 
-        private void DrawMap(int windowWight, int windowHeight, Vector2 camDir, Vector2 camPlane,
-                             Vector2 camPos, IntPtr renderer, UInt32[] buffer, double[] ZBuffer,
-                             int[] spriteOrder, double[] spriteDistance, Sprite[] sprite, float pitch, float posZ)
+        private void DrawMap(int windowWight, int windowHeight, Camera camera, IntPtr renderer, UInt32[] buffer, double[] ZBuffer,
+                             int[] spriteOrder, double[] spriteDistance, Sprite[] sprite)
         {
+            var camDir = camera.Dir;
+            var camPos = camera.Pos;
+            var camPlane = camera.Plane;
+            var pitch = camera.Pitch;
+            
             //FLOOR CASTING
             for (int y = 0; y < windowHeight; y++)
             {
@@ -326,7 +297,7 @@ namespace RaycastEngine
                 int p = (int)(is_floor ? (y - windowHeight / 2 - pitch) : (windowHeight / 2 - y + pitch));
 
                 // Vertical position of the camera.
-                float camZ = (float)(is_floor ? (0.5 * windowHeight + posZ) : (0.5 * windowHeight - posZ));
+                float camZ = (float)(is_floor ? (0.5 * windowHeight + camPos.Z) : (0.5 * windowHeight - camPos.Z));
                 //float posZ = 0.5f * windowHeight;
 
                 // Horizontal distance from the camera to the floor for the current row.
@@ -454,10 +425,10 @@ namespace RaycastEngine
                 int lineHeight = (int)(windowHeight / perpWallDist);
 
                 //calculate lowest and highest pixel to fill in current stripe
-                int drawStart = (int)(-lineHeight / 2 + windowHeight / 2 + pitch + (posZ / perpWallDist));
+                int drawStart = (int)(-lineHeight / 2 + windowHeight / 2 + pitch + (camPos.Z / perpWallDist));
                 if (drawStart < 0) drawStart = 0;
 
-                int drawEnd = (int)(lineHeight / 2 + windowHeight / 2 + pitch + (posZ / perpWallDist));
+                int drawEnd = (int)(lineHeight / 2 + windowHeight / 2 + pitch + (camPos.Z / perpWallDist));
                 if (drawEnd >= windowHeight) drawEnd = windowHeight - 1;
                 //texturing calculations
                 int texNum = worldMap.GetWallType(mapX, mapY) - 1; //1 subtracted from it so that texture 0 can be used!
@@ -478,7 +449,7 @@ namespace RaycastEngine
                 // How much to increase the texture coordinate per screen pixel
                 double step = 1.0 * texHeight / lineHeight;
                 // Starting texture coordinate
-                double texPos = (drawStart - pitch - (posZ / perpWallDist) - windowHeight / 2 + lineHeight / 2) * step;
+                double texPos = (drawStart - pitch - (camPos.Z / perpWallDist) - windowHeight / 2 + lineHeight / 2) * step;
                 for (int y = drawStart; y < drawEnd; y++)
                 {
                     // Cast the texture coordinate to integer, and mask with (texHeight - 1) in case of overflow
@@ -503,31 +474,8 @@ namespace RaycastEngine
             //after sorting the sprites, do the projection and draw them
             for (int i = 0; i < numSprites; i++)
             {
-                sprite[i].Draw(camPos, camDir, camPlane, windowWight, windowHeight, pitch, posZ, texWidth, texHeight, buffer, ZBuffer, texture);
+                sprite[i].Draw(camPos, camDir, camPlane, windowWight, windowHeight, pitch, texWidth, texHeight, buffer, ZBuffer, texture);
             }
-        }
-
-        private void Rotating(float rotSpeed, ref Vector2 camDir, ref Vector2 camPlane)
-        {
-            float oldCamDirX = camDir.X;
-            camDir.X = camDir.X * MathF.Cos(rotSpeed) - camDir.Y * MathF.Sin(rotSpeed);
-            camDir.Y = oldCamDirX * MathF.Sin(rotSpeed) + camDir.Y * MathF.Cos(rotSpeed);
-            
-            float oldCamPlaneX = camPlane.X;
-            camPlane.X = camPlane.X * MathF.Cos(rotSpeed) - camPlane.Y * MathF.Sin(rotSpeed);
-            camPlane.Y = oldCamPlaneX * MathF.Sin(rotSpeed) + camPlane.Y * MathF.Cos(rotSpeed);
-        }
-
-        private void Rotating1(float rotSpeed, Camera camera)
-        {
-            float oldCamDirX = camera.Dir.X;
-            camera.Dir = new Vector2(camera.Dir.X * MathF.Cos(rotSpeed) - camera.Dir.Y * MathF.Sin(rotSpeed),
-                                     oldCamDirX * MathF.Sin(rotSpeed) + camera.Dir.Y * MathF.Cos(rotSpeed));
-                        
-            float oldCamPlaneX = camera.Plane.X;
-            camera.Plane = new Vector2(camera.Plane.X * MathF.Cos(rotSpeed) - camera.Plane.Y * MathF.Sin(rotSpeed),
-                                      oldCamPlaneX * MathF.Sin(rotSpeed) + camera.Plane.Y * MathF.Cos(rotSpeed));
-            //camPlane.Y = ;
         }
 
         private List<uint> GetTexturePixels(string path)

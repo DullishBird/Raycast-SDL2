@@ -36,8 +36,8 @@ namespace RaycastEngine
             vMove = vMove_;
         }
 
-        public void Draw(Vector2 camPos, Vector2 camDir, Vector2 camPlane, int windowWight,
-                         int windowHeight, float pitch, float posZ, int texWidth, int texHeight,
+        public void Draw(Vector3 camPos, Vector2 camDir, Vector2 camPlane, int windowWight,
+                         int windowHeight, float pitch, int texWidth, int texHeight,
                          uint[] buffer, double[] ZBuffer, List<uint>[] texture) 
         {
             checkTextureIndex(textureIndex);
@@ -63,7 +63,7 @@ namespace RaycastEngine
             //float vMove = sprite[vMove];
 
 
-            int vMoveScreen = (int)((vMove / transformY) + pitch + posZ / transformY);
+            int vMoveScreen = (int)((vMove / transformY) + pitch + camPos.Z / transformY);
             //calculate height of the sprite on screen
             int spriteHeight = Math.Abs((int)(windowHeight / (transformY))) / vDiv; //using 'transformY' instead of the real distance prevents fisheye
                                                                                                            //calculate lowest and highest pixel to fill in current stripe
