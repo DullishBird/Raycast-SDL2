@@ -18,10 +18,10 @@ namespace RaycastEngine
         int texWidth = 64;
         int texHeight = 64;
 
-        List<UInt32>[] texture = new List<UInt32>[11];
+       //List<UInt32>[] texture = new List<UInt32>[11];
         Window window = new Window("SDL .NET 6 Tutorial", 640, 480);
         Camera camera = new Camera(new Vector3(22, 12, 0),new Vector2(-1, 0), new Vector2(0, 0.66f), 0f);
-
+        Image image = new Image();
         static int numSprites = 19;
                 
         public RaycastRenderer()
@@ -104,12 +104,12 @@ namespace RaycastEngine
             int[] spriteOrder = new int[numSprites];
             double[] spriteDistance = new double[numSprites];
 
-            for (int i = 0; i < 11; i++) texture[i] = Enumerable.Repeat(0u, windowHeight * windowWight).ToList();
+            //for (int i = 0; i < 11; i++) texture[i] = Enumerable.Repeat(0u, windowHeight * windowWight).ToList();
 
             //Choose between generated textures and Wolfenstein 3D textures here
             
             //LoadGeneratedTexures();
-            LoadTexures();
+            image.LoadTexures(path);
             
             //timing for input and FPS counter
             oldTime = time;
@@ -334,14 +334,14 @@ namespace RaycastEngine
                     if (is_floor)
                     {
                         // floor
-                        color = texture[floorTexture][texWidth * ty + tx];
+                        color = image.Texture[floorTexture][texWidth * ty + tx];
                         //color = (color >> 1) & 8355711; // make a bit darker
                         buffer[y * windowWight + x] = color;
                     }
                     else
                     {
                         //ceiling (symmetrical, at screenHeight - y - 1 instead of y)
-                        color = texture[ceilingTexture][texWidth * ty + tx];
+                        color = image.Texture[ceilingTexture][texWidth * ty + tx];
                         //color = (color >> 1) & 8355711; // make a bit darker
                         buffer[y * windowWight + x] = color;
                     }
@@ -455,7 +455,7 @@ namespace RaycastEngine
                     // Cast the texture coordinate to integer, and mask with (texHeight - 1) in case of overflow
                     int texY = (int)texPos & (texHeight - 1);
                     texPos += step;
-                    UInt32 color = texture[texNum][texHeight * texY + texX];
+                    UInt32 color = image.Texture[texNum][texHeight * texY + texX];
                     ////make color darker for y-sides: R, G and B byte each divided through two with a "shift" and an "and"
                     //if (side == 1) color = (color >> 1) & 8355711;
 
@@ -474,92 +474,92 @@ namespace RaycastEngine
             //after sorting the sprites, do the projection and draw them
             for (int i = 0; i < numSprites; i++)
             {
-                sprite[i].Draw(camPos, camDir, camPlane, windowWight, windowHeight, pitch, texWidth, texHeight, buffer, ZBuffer, texture);
+                sprite[i].Draw(camPos, camDir, camPlane, windowWight, windowHeight, pitch, texWidth, texHeight, buffer, ZBuffer, image.Texture);
             }
         }
 
-        private List<uint> GetTexturePixels(string path)
-        {
-            List<uint> pixels = new List<uint>();
-            IntPtr image = SDL_image.IMG_Load(path);
+        //private List<uint> GetTexturePixels(string path)
+        //{
+        //    List<uint> pixels = new List<uint>();
+        //    IntPtr image = SDL_image.IMG_Load(path);
 
-            SDL.SDL_Surface surfaceImage = (SDL.SDL_Surface)Marshal.PtrToStructure(image, typeof(SDL.SDL_Surface));
-            SDL.SDL_PixelFormat format = (SDL.SDL_PixelFormat)Marshal.PtrToStructure(surfaceImage.format, typeof(SDL.SDL_PixelFormat));
+        //    SDL.SDL_Surface surfaceImage = (SDL.SDL_Surface)Marshal.PtrToStructure(image, typeof(SDL.SDL_Surface));
+        //    SDL.SDL_PixelFormat format = (SDL.SDL_PixelFormat)Marshal.PtrToStructure(surfaceImage.format, typeof(SDL.SDL_PixelFormat));
 
-            unsafe
-            {
-                var srcPixelPtr = (byte*)surfaceImage.pixels.ToPointer();
-                for (int y = 0; y < surfaceImage.h; y++)
-                {
-                    for (int x = 0; x < surfaceImage.w; x++)
-                    {
-                        UInt32 pixelColor = *(UInt32*)(srcPixelPtr + y * surfaceImage.pitch + x * format.BytesPerPixel);
+        //    unsafe
+        //    {
+        //        var srcPixelPtr = (byte*)surfaceImage.pixels.ToPointer();
+        //        for (int y = 0; y < surfaceImage.h; y++)
+        //        {
+        //            for (int x = 0; x < surfaceImage.w; x++)
+        //            {
+        //                UInt32 pixelColor = *(UInt32*)(srcPixelPtr + y * surfaceImage.pitch + x * format.BytesPerPixel);
 
-                        UInt32 red = pixelColor & format.Rmask;
-                        UInt32 green = pixelColor & format.Gmask;
-                        UInt32 blue = pixelColor & format.Bmask;
-                        UInt32 alpha = 0x000000ff;
+        //                UInt32 red = pixelColor & format.Rmask;
+        //                UInt32 green = pixelColor & format.Gmask;
+        //                UInt32 blue = pixelColor & format.Bmask;
+        //                UInt32 alpha = 0x000000ff;
 
-                        UInt32 redWithShift = red << 24;
-                        UInt32 greenWithShift = green << 8;
-                        UInt32 blueWithShift = blue >> 8;
+        //                UInt32 redWithShift = red << 24;
+        //                UInt32 greenWithShift = green << 8;
+        //                UInt32 blueWithShift = blue >> 8;
 
-                        pixelColor = redWithShift;
-                        pixelColor |= greenWithShift;
-                        pixelColor |= blueWithShift;
-                        pixelColor |= alpha;
+        //                pixelColor = redWithShift;
+        //                pixelColor |= greenWithShift;
+        //                pixelColor |= blueWithShift;
+        //                pixelColor |= alpha;
 
-                        pixels.Add(pixelColor);
-                    }
-                }
-            }
-            return pixels;
-        }
-        private List<uint>[] LoadGeneratedTexures()
-        {
-            for (int i = 0; i < 8; i++) 
-                texture[i] = Enumerable.Repeat(0u, window.GetHeight() * window.GetWight()).ToList();
+        //                pixels.Add(pixelColor);
+        //            }
+        //        }
+        //    }
+        //    return pixels;
+        //}
+        //private List<uint>[] LoadGeneratedTexures()
+        //{
+        //    for (int i = 0; i < 8; i++) 
+        //        texture[i] = Enumerable.Repeat(0u, window.GetHeight() * window.GetWight()).ToList();
 
-            for (int x = 0; x < texWidth; x++)
-            {
-                for (int y = 0; y < texHeight; y++)
-                {
-                    int xorcolor = (x * 256 / texWidth) ^ (y * 256 / texHeight);
-                    int ycolor = y * 256 / texWidth;
-                    int xycolor = y * 128 / texHeight + x * 128 / texWidth;
+        //    for (int x = 0; x < texWidth; x++)
+        //    {
+        //        for (int y = 0; y < texHeight; y++)
+        //        {
+        //            int xorcolor = (x * 256 / texWidth) ^ (y * 256 / texHeight);
+        //            int ycolor = y * 256 / texWidth;
+        //            int xycolor = y * 128 / texHeight + x * 128 / texWidth;
 
-                    texture[0][texWidth * y + x] = 65536 * 254 * Convert.ToUInt32(x != y && x != texWidth - y); //flat red texture with black cross
-                    texture[1][texWidth * y + x] = (UInt32)(xycolor + 256 * xycolor + 65536 * xycolor); //sloped greyscale
-                    texture[2][texWidth * y + x] = (UInt32)(256 * xycolor + 65536 * xycolor); //sloped yellow gradient
-                    texture[3][texWidth * y + x] = (UInt32)(xorcolor + 256 * xorcolor + 65536 * xorcolor); //xor greyscale
-                    texture[4][texWidth * y + x] = (UInt32)(256 * xorcolor); //xor green
-                    texture[5][texWidth * y + x] = (UInt32)(65536 * 192 * (x % 16 & y % 16)); //red bricks
-                    texture[6][texWidth * y + x] = (UInt32)(65536 * ycolor); //red gradient
-                    texture[7][texWidth * y + x] = 128 + 256 * 128 + 65536 * 128; //flat grey texture
-                }
-            }
-            return texture;
-        }
+        //            texture[0][texWidth * y + x] = 65536 * 254 * Convert.ToUInt32(x != y && x != texWidth - y); //flat red texture with black cross
+        //            texture[1][texWidth * y + x] = (UInt32)(xycolor + 256 * xycolor + 65536 * xycolor); //sloped greyscale
+        //            texture[2][texWidth * y + x] = (UInt32)(256 * xycolor + 65536 * xycolor); //sloped yellow gradient
+        //            texture[3][texWidth * y + x] = (UInt32)(xorcolor + 256 * xorcolor + 65536 * xorcolor); //xor greyscale
+        //            texture[4][texWidth * y + x] = (UInt32)(256 * xorcolor); //xor green
+        //            texture[5][texWidth * y + x] = (UInt32)(65536 * 192 * (x % 16 & y % 16)); //red bricks
+        //            texture[6][texWidth * y + x] = (UInt32)(65536 * ycolor); //red gradient
+        //            texture[7][texWidth * y + x] = 128 + 256 * 128 + 65536 * 128; //flat grey texture
+        //        }
+        //    }
+        //    return texture;
+        //}
 
-        private List<uint>[] LoadTexures()
-        {
-            for (int i = 0; i < 8; i++)
-                texture[i] = Enumerable.Repeat(0u, window.GetHeight() * window.GetWight()).ToList();
-            //load textures
-            texture[0] = GetTexturePixels(path + "/res/pics/eagle.png");
-            texture[1] = GetTexturePixels(path + "/res/pics/redbrick.png");
-            texture[2] = GetTexturePixels(path + "/res/pics/purplestone.png");
-            texture[3] = GetTexturePixels(path + "/res/pics/greystone.png");
-            texture[4] = GetTexturePixels(path + "/res/pics/bluestone.png");
-            texture[5] = GetTexturePixels(path + "/res/pics/mossy.png");
-            texture[6] = GetTexturePixels(path + "/res/pics/wood.png");
-            texture[7] = GetTexturePixels(path + "/res/pics/colorstone.png");
-            //load sprites
-            texture[8] = GetTexturePixels(path + "/res/pics/barrel.png");
-            texture[9] = GetTexturePixels(path + "/res/pics/pillar.png");
-            texture[10] = GetTexturePixels(path + "/res/pics/greenlight.png");
-            return texture;
-        }
+        //private List<uint>[] LoadTexures()
+        //{
+        //    //for (int i = 0; i < 11; i++)
+        //    //    texture[i] = Enumerable.Repeat(0u, window.GetHeight() * window.GetWight()).ToList();
+        //    //load textures
+        //    texture[0] = GetTexturePixels(path + "/res/pics/eagle.png");
+        //    texture[1] = GetTexturePixels(path + "/res/pics/redbrick.png");
+        //    texture[2] = GetTexturePixels(path + "/res/pics/purplestone.png");
+        //    texture[3] = GetTexturePixels(path + "/res/pics/greystone.png");
+        //    texture[4] = GetTexturePixels(path + "/res/pics/bluestone.png");
+        //    texture[5] = GetTexturePixels(path + "/res/pics/mossy.png");
+        //    texture[6] = GetTexturePixels(path + "/res/pics/wood.png");
+        //    texture[7] = GetTexturePixels(path + "/res/pics/colorstone.png");
+        //    //load sprites
+        //    texture[8] = GetTexturePixels(path + "/res/pics/barrel.png");
+        //    texture[9] = GetTexturePixels(path + "/res/pics/pillar.png");
+        //    texture[10] = GetTexturePixels(path + "/res/pics/greenlight.png");
+        //    return texture;
+        //}
 
         public void SortSprites(Sprite[] sprites, double[] spriteDistance)
         {
