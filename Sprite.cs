@@ -37,8 +37,8 @@ namespace RaycastEngine
         }
 
         public void Draw(Vector3 camPos, Vector2 camDir, Vector2 camPlane, int windowWight,
-                         int windowHeight, float pitch, int texWidth, int texHeight,
-                         uint[] buffer, double[] ZBuffer, List<uint>[] texture) 
+                         int windowHeight, float pitch,/* int texWidth, int texHeight,*/
+                         uint[] buffer, double[] ZBuffer, List<Image> textures) 
         {
             checkTextureIndex(textureIndex);
             //translate sprite position to relative to camera
@@ -83,7 +83,7 @@ namespace RaycastEngine
             //loop through every vertical stripe of the sprite on screen
             for (int stripe = drawStartX; stripe < drawEndX; stripe++)
             {
-                int texX = (int)(256 * (stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth) / 256;
+                int texX = (int)(256 * (stripe - (-spriteWidth / 2 + spriteScreenX)) * textures[textureIndex].Widht / spriteWidth) / 256;
                 if (texX < 0) texX = 0; //костыль
                                         //the conditions in the if are:
                                         //1) it's in front of camera plane so you don't see things behind you
@@ -94,9 +94,9 @@ namespace RaycastEngine
                     for (int y = drawStartY; y < drawEndY; y++) //for every pixel of the current stripe
                     {
                         int d = (y - vMoveScreen) * 256 - windowHeight * 128 + spriteHeight * 128; //256 and 128 factors to avoid floats
-                        int texY = ((d * texHeight) / spriteHeight) / 256;
+                        int texY = ((d * textures[textureIndex].Hight) / spriteHeight) / 256;
                         if (texY < 0) texY = 0; //тут тоже
-                        UInt32 color = texture[textureIndex][texWidth * texY + texX]; //get current color from the texture
+                        UInt32 color = textures[textureIndex][texX, texY]; //get current color from the texture
                         
                         //if ((color & 0xFFFFFF00) != 0) buffer[y * windowWight + stripe] = color; //paint pixel if it isn't black, black is the invisible color
                         if ((color & 0xFFFFFF00) != 0) buffer[y * windowWight + stripe] = ColorMultiply(color, transperency) + ColorMultiply(buffer[y * windowWight + stripe], 1 - transperency);
