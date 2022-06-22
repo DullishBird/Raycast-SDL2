@@ -10,39 +10,25 @@ namespace RaycastEngine
 {
     public class Image
     {
-        private List<UInt32>[] texture = new List<UInt32>[11];
-        public List<UInt32>[] Texture { get { return texture; } }
-        public List<UInt32>[] FillTextureList(int windowWight, int windowHeight)
+        private List<uint> pixels = new List<uint>();
+       
+        private int widht = 0;
+        private int hight = 0;
+
+        public Image(string path, int i)
         {
-            for (int i = 0; i < 11; i++) texture[i] = Enumerable.Repeat(0u, windowHeight * windowWight).ToList();
-            return texture;
+            Load(path);
         }
 
-        public List<uint>[] LoadTexures(string path)
+        private void Load(string path)
         {
-            //load textures
-            texture[0] = GetTexturePixels(path + "/res/pics/eagle.png");
-            texture[1] = GetTexturePixels(path + "/res/pics/redbrick.png");
-            texture[2] = GetTexturePixels(path + "/res/pics/purplestone.png");
-            texture[3] = GetTexturePixels(path + "/res/pics/greystone.png");
-            texture[4] = GetTexturePixels(path + "/res/pics/bluestone.png");
-            texture[5] = GetTexturePixels(path + "/res/pics/mossy.png");
-            texture[6] = GetTexturePixels(path + "/res/pics/wood.png");
-            texture[7] = GetTexturePixels(path + "/res/pics/colorstone.png");
-            //load sprites
-            texture[8] = GetTexturePixels(path + "/res/pics/barrel.png");
-            texture[9] = GetTexturePixels(path + "/res/pics/pillar.png");
-            texture[10] = GetTexturePixels(path + "/res/pics/greenlight.png");
-            return texture;
-        }
-
-        private List<uint> GetTexturePixels(string path)
-        {
-            List<uint> pixels = new List<uint>();
             IntPtr image = SDL_image.IMG_Load(path);
 
             SDL.SDL_Surface surfaceImage = (SDL.SDL_Surface)Marshal.PtrToStructure(image, typeof(SDL.SDL_Surface));
             SDL.SDL_PixelFormat format = (SDL.SDL_PixelFormat)Marshal.PtrToStructure(surfaceImage.format, typeof(SDL.SDL_PixelFormat));
+            
+            widht = surfaceImage.w;
+            hight = surfaceImage.h;
 
             unsafe
             {
@@ -71,7 +57,14 @@ namespace RaycastEngine
                     }
                 }
             }
-            return pixels;
+        }
+
+        public uint this[int x, int y]
+        {
+            get
+            {
+                return pixels[y * widht + x];
+            }
         }
     }
 }

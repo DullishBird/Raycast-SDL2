@@ -18,12 +18,18 @@ namespace RaycastEngine
         int texWidth = 64;
         int texHeight = 64;
 
-       //List<UInt32>[] texture = new List<UInt32>[11];
+
         Window window = new Window("SDL .NET 6 Tutorial", 640, 480);
-        Camera camera = new Camera(new Vector3(22, 12, 0),new Vector2(-1, 0), new Vector2(0, 0.66f), 0f);
-        Image image = new Image();
+        Camera camera = new Camera(new Vector3(22, 12, 0), new Vector2(-1, 0), new Vector2(0, 0.66f), 0f);
+
         static int numSprites = 19;
-                
+
+        string[] texturePath = {"/res/pics/eagle.png", "/res/pics/redbrick.png",
+                                "/res/pics/purplestone.png", "/res/pics/greystone.png", "/res/pics/bluestone.png",
+                                "/res/pics/mossy.png", "/res/pics/wood.png", "/res/pics/colorstone.png",
+                                "/res/pics/barrel.png", "/res/pics/pillar.png", "/res/pics/greenlight.png"};
+        List<Image> textures = new List<Image>();
+
         public RaycastRenderer()
         {
             path = Environment.CurrentDirectory;
@@ -34,6 +40,11 @@ namespace RaycastEngine
                 directoryPath = path + "/res/map2.txt";
             }
             worldMap = new WorldMap(directoryPath);
+
+            for (int i = 0; i < texturePath.Length; i++)
+            {
+                textures.Add(new Image(path + texturePath[i], i));
+            }
         }
 
         public void Start()
@@ -51,7 +62,7 @@ namespace RaycastEngine
                 Console.WriteLine($"There was an issue initilizing SDL_ttf. {SDL_ttf.TTF_GetError()}");
             }
 
-            Sprite[] sprite = new Sprite[] 
+            Sprite[] sprite = new Sprite[]
             {
                 //green light in front of playerstart
                 new Sprite (new Vector2(20.5f, 11.5f), 10), 
@@ -80,10 +91,7 @@ namespace RaycastEngine
                 new Sprite (new Vector2(10.0f, 15.1f), 8, 2, 2, 128.0f),
                 new Sprite (new Vector2(10.5f, 15.8f), 8, 2, 2, 128.0f)
             };
-            
-            
 
-            //Window window = new Window("SDL .NET 6 Tutorial", 640, 480);
             RenderText renderText = new RenderText();
 
             window.Titile = "Test";
@@ -96,7 +104,7 @@ namespace RaycastEngine
             var windowHeight = window.GetHeight();
 
             UInt32[] buffer = new UInt32[windowHeight * windowWight];
-            
+
             //1D Zbuffer
             double[] ZBuffer = new double[windowWight];
 
@@ -104,13 +112,6 @@ namespace RaycastEngine
             int[] spriteOrder = new int[numSprites];
             double[] spriteDistance = new double[numSprites];
 
-            //for (int i = 0; i < 11; i++) texture[i] = Enumerable.Repeat(0u, windowHeight * windowWight).ToList();
-
-            //Choose between generated textures and Wolfenstein 3D textures here
-            
-            //LoadGeneratedTexures();
-            image.LoadTexures(path);
-            
             //timing for input and FPS counter
             oldTime = time;
             time = SDL.SDL_GetTicks();
@@ -120,9 +121,7 @@ namespace RaycastEngine
             float vertMoveSpeed = frameTime * 1.0f; //vertical cam movement
             float rotSpeed = frameTime * 0.1f;//the constant value is in radians/second
             float mrotSpeed = frameTime * 0.005f;//the constant value is in radians/second
-            
-            
-            
+
             SDL.SDL_GetMouseState(out int mCamPosX, out int mCamPosY);
             float oldMousePosX = mCamPosX;
             float oldMousePosY = mCamPosY;
@@ -132,7 +131,7 @@ namespace RaycastEngine
                 // Check to see if there are any events and continue to do so until the queue is empty.
                 while (SDL.SDL_PollEvent(out SDL.SDL_Event e) == 1)
                 {
-                    
+
                     switch (e.type)
                     {
                         case SDL.SDL_EventType.SDL_QUIT:
@@ -245,7 +244,7 @@ namespace RaycastEngine
                 }
 
                 //Now render the texture target to our screen, but upside down
-                
+
                 if (SDL.SDL_RenderCopyEx(renderer, frameTexture, IntPtr.Zero, IntPtr.Zero, 0, IntPtr.Zero, SDL.SDL_RendererFlip.SDL_FLIP_NONE) < 0)
                 {
                     Console.WriteLine($"There was an issue with SDL_RenderCopyEx. {SDL.SDL_GetError()}");
@@ -280,13 +279,13 @@ namespace RaycastEngine
             var camPos = camera.Pos;
             var camPlane = camera.Plane;
             var pitch = camera.Pitch;
-            
+
             //FLOOR CASTING
             for (int y = 0; y < windowHeight; y++)
             {
                 // whether this section is floor or ceiling
                 bool is_floor = y > windowHeight / 2 + pitch;
-                
+
                 // rayDir for leftmost ray (x = 0) and rightmost ray (x = w)
                 float rayDirX0 = camDir.X - camPlane.X;
                 float rayDirY0 = camDir.Y - camPlane.Y;
@@ -334,14 +333,14 @@ namespace RaycastEngine
                     if (is_floor)
                     {
                         // floor
-                        color = image.Texture[floorTexture][texWidth * ty + tx];
+                        color = textures[floorTexture][tx, ty];
                         //color = (color >> 1) & 8355711; // make a bit darker
                         buffer[y * windowWight + x] = color;
                     }
                     else
                     {
                         //ceiling (symmetrical, at screenHeight - y - 1 instead of y)
-                        color = image.Texture[ceilingTexture][texWidth * ty + tx];
+                        color = textures[ceilingTexture][tx, ty];
                         //color = (color >> 1) & 8355711; // make a bit darker
                         buffer[y * windowWight + x] = color;
                     }
@@ -419,7 +418,7 @@ namespace RaycastEngine
                 }
 
                 if (side == 0) perpWallDist = (sideDistX - deltaDistX);
-                else           perpWallDist = (sideDistY - deltaDistY);
+                else perpWallDist = (sideDistY - deltaDistY);
 
                 //Calculate height of line to draw on screen
                 int lineHeight = (int)(windowHeight / perpWallDist);
@@ -455,7 +454,7 @@ namespace RaycastEngine
                     // Cast the texture coordinate to integer, and mask with (texHeight - 1) in case of overflow
                     int texY = (int)texPos & (texHeight - 1);
                     texPos += step;
-                    UInt32 color = image.Texture[texNum][texHeight * texY + texX];
+                    UInt32 color = textures[texNum][texX, texY];
                     ////make color darker for y-sides: R, G and B byte each divided through two with a "shift" and an "and"
                     //if (side == 1) color = (color >> 1) & 8355711;
 
@@ -470,96 +469,13 @@ namespace RaycastEngine
                 spriteDistance[i] = ((camPos.X - sprite[i].Position.X) * (camPos.X - sprite[i].Position.X) + (camPos.Y - sprite[i].Position.Y) * (camPos.Y - sprite[i].Position.Y)); //sqrt not taken, unneeded
             }
             SortSprites(sprite, spriteDistance);
-            
+
             //after sorting the sprites, do the projection and draw them
             for (int i = 0; i < numSprites; i++)
             {
-                sprite[i].Draw(camPos, camDir, camPlane, windowWight, windowHeight, pitch, texWidth, texHeight, buffer, ZBuffer, image.Texture);
+                sprite[i].Draw(camPos, camDir, camPlane, windowWight, windowHeight, pitch, texWidth, texHeight, buffer, ZBuffer, textures);
             }
         }
-
-        //private List<uint> GetTexturePixels(string path)
-        //{
-        //    List<uint> pixels = new List<uint>();
-        //    IntPtr image = SDL_image.IMG_Load(path);
-
-        //    SDL.SDL_Surface surfaceImage = (SDL.SDL_Surface)Marshal.PtrToStructure(image, typeof(SDL.SDL_Surface));
-        //    SDL.SDL_PixelFormat format = (SDL.SDL_PixelFormat)Marshal.PtrToStructure(surfaceImage.format, typeof(SDL.SDL_PixelFormat));
-
-        //    unsafe
-        //    {
-        //        var srcPixelPtr = (byte*)surfaceImage.pixels.ToPointer();
-        //        for (int y = 0; y < surfaceImage.h; y++)
-        //        {
-        //            for (int x = 0; x < surfaceImage.w; x++)
-        //            {
-        //                UInt32 pixelColor = *(UInt32*)(srcPixelPtr + y * surfaceImage.pitch + x * format.BytesPerPixel);
-
-        //                UInt32 red = pixelColor & format.Rmask;
-        //                UInt32 green = pixelColor & format.Gmask;
-        //                UInt32 blue = pixelColor & format.Bmask;
-        //                UInt32 alpha = 0x000000ff;
-
-        //                UInt32 redWithShift = red << 24;
-        //                UInt32 greenWithShift = green << 8;
-        //                UInt32 blueWithShift = blue >> 8;
-
-        //                pixelColor = redWithShift;
-        //                pixelColor |= greenWithShift;
-        //                pixelColor |= blueWithShift;
-        //                pixelColor |= alpha;
-
-        //                pixels.Add(pixelColor);
-        //            }
-        //        }
-        //    }
-        //    return pixels;
-        //}
-        //private List<uint>[] LoadGeneratedTexures()
-        //{
-        //    for (int i = 0; i < 8; i++) 
-        //        texture[i] = Enumerable.Repeat(0u, window.GetHeight() * window.GetWight()).ToList();
-
-        //    for (int x = 0; x < texWidth; x++)
-        //    {
-        //        for (int y = 0; y < texHeight; y++)
-        //        {
-        //            int xorcolor = (x * 256 / texWidth) ^ (y * 256 / texHeight);
-        //            int ycolor = y * 256 / texWidth;
-        //            int xycolor = y * 128 / texHeight + x * 128 / texWidth;
-
-        //            texture[0][texWidth * y + x] = 65536 * 254 * Convert.ToUInt32(x != y && x != texWidth - y); //flat red texture with black cross
-        //            texture[1][texWidth * y + x] = (UInt32)(xycolor + 256 * xycolor + 65536 * xycolor); //sloped greyscale
-        //            texture[2][texWidth * y + x] = (UInt32)(256 * xycolor + 65536 * xycolor); //sloped yellow gradient
-        //            texture[3][texWidth * y + x] = (UInt32)(xorcolor + 256 * xorcolor + 65536 * xorcolor); //xor greyscale
-        //            texture[4][texWidth * y + x] = (UInt32)(256 * xorcolor); //xor green
-        //            texture[5][texWidth * y + x] = (UInt32)(65536 * 192 * (x % 16 & y % 16)); //red bricks
-        //            texture[6][texWidth * y + x] = (UInt32)(65536 * ycolor); //red gradient
-        //            texture[7][texWidth * y + x] = 128 + 256 * 128 + 65536 * 128; //flat grey texture
-        //        }
-        //    }
-        //    return texture;
-        //}
-
-        //private List<uint>[] LoadTexures()
-        //{
-        //    //for (int i = 0; i < 11; i++)
-        //    //    texture[i] = Enumerable.Repeat(0u, window.GetHeight() * window.GetWight()).ToList();
-        //    //load textures
-        //    texture[0] = GetTexturePixels(path + "/res/pics/eagle.png");
-        //    texture[1] = GetTexturePixels(path + "/res/pics/redbrick.png");
-        //    texture[2] = GetTexturePixels(path + "/res/pics/purplestone.png");
-        //    texture[3] = GetTexturePixels(path + "/res/pics/greystone.png");
-        //    texture[4] = GetTexturePixels(path + "/res/pics/bluestone.png");
-        //    texture[5] = GetTexturePixels(path + "/res/pics/mossy.png");
-        //    texture[6] = GetTexturePixels(path + "/res/pics/wood.png");
-        //    texture[7] = GetTexturePixels(path + "/res/pics/colorstone.png");
-        //    //load sprites
-        //    texture[8] = GetTexturePixels(path + "/res/pics/barrel.png");
-        //    texture[9] = GetTexturePixels(path + "/res/pics/pillar.png");
-        //    texture[10] = GetTexturePixels(path + "/res/pics/greenlight.png");
-        //    return texture;
-        //}
 
         public void SortSprites(Sprite[] sprites, double[] spriteDistance)
         {
@@ -567,5 +483,5 @@ namespace RaycastEngine
             Array.Reverse(sprites);
             Array.Reverse(spriteDistance);
         }
-    }   
+    }
 }
