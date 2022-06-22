@@ -13,7 +13,10 @@ namespace RaycastEngine
         private List<uint> pixels = new List<uint>();
        
         private int widht = 0;
+        public int Widht { get { return widht; } }
+
         private int hight = 0;
+        public int Hight { get { return hight; } }
 
         public Image(string path, int i)
         {

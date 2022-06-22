@@ -15,10 +15,6 @@ namespace RaycastEngine
         private string path = "";
         private WorldMap worldMap;
 
-        int texWidth = 64;
-        int texHeight = 64;
-
-
         Window window = new Window("SDL .NET 6 Tutorial", 640, 480);
         Camera camera = new Camera(new Vector3(22, 12, 0), new Vector2(-1, 0), new Vector2(0, 0.66f), 0f);
 
@@ -29,7 +25,7 @@ namespace RaycastEngine
                                 "/res/pics/mossy.png", "/res/pics/wood.png", "/res/pics/colorstone.png",
                                 "/res/pics/barrel.png", "/res/pics/pillar.png", "/res/pics/greenlight.png"};
         List<Image> textures = new List<Image>();
-
+        
         public RaycastRenderer()
         {
             path = Environment.CurrentDirectory;
@@ -318,32 +314,20 @@ namespace RaycastEngine
                     int cellX = (int)(floorX);
                     int cellY = (int)(floorY);
 
+                    // choose texture and draw the pixel
+                    int floorTexture = 3;
+                    int ceilingTexture = 6;
+                    var texureIndex = is_floor ? floorTexture : ceilingTexture;
                     // get the texture coordinate from the fractional part
-                    int tx = (int)(texWidth * (floorX - cellX)) & (texWidth - 1);
-                    int ty = (int)(texHeight * (floorY - cellY)) & (texHeight - 1);
+                    int tx = (int)(textures[texureIndex].Widht * (floorX - cellX)) & (textures[texureIndex].Widht - 1);
+                    int ty = (int)(textures[texureIndex].Hight * (floorY - cellY)) & (textures[texureIndex].Hight - 1);
 
                     floorX += floorStepX;
                     floorY += floorStepY;
 
-                    // choose texture and draw the pixel
-                    int floorTexture = 3;
-                    int ceilingTexture = 6;
-                    UInt32 color;
-
-                    if (is_floor)
-                    {
-                        // floor
-                        color = textures[floorTexture][tx, ty];
-                        //color = (color >> 1) & 8355711; // make a bit darker
-                        buffer[y * windowWight + x] = color;
-                    }
-                    else
-                    {
-                        //ceiling (symmetrical, at screenHeight - y - 1 instead of y)
-                        color = textures[ceilingTexture][tx, ty];
-                        //color = (color >> 1) & 8355711; // make a bit darker
-                        buffer[y * windowWight + x] = color;
-                    }
+                    UInt32 color = textures[texureIndex][tx, ty];
+                    //color = (color >> 1) & 8355711; // make a bit darker
+                    buffer[y * windowWight + x] = color;
                 }
             }
             //WALL CASTING
@@ -439,20 +423,20 @@ namespace RaycastEngine
                 wallX -= Math.Floor((wallX));
 
                 //x coordinate on the texture
-                int texX = (int)(wallX * (double)(texWidth));
+                int texX = (int)(wallX * (double)(textures[texNum].Widht));
                 if (side == 0 && rayCamDirX > 0)
-                    texX = texWidth - texX - 1;
+                    texX = textures[texNum].Widht - texX - 1;
                 if (side == 1 && rayCamDirY < 0)
-                    texX = texWidth - texX - 1;
+                    texX = textures[texNum].Widht - texX - 1;
 
                 // How much to increase the texture coordinate per screen pixel
-                double step = 1.0 * texHeight / lineHeight;
+                double step = 1.0 * textures[texNum].Hight / lineHeight;
                 // Starting texture coordinate
                 double texPos = (drawStart - pitch - (camPos.Z / perpWallDist) - windowHeight / 2 + lineHeight / 2) * step;
                 for (int y = drawStart; y < drawEnd; y++)
                 {
                     // Cast the texture coordinate to integer, and mask with (texHeight - 1) in case of overflow
-                    int texY = (int)texPos & (texHeight - 1);
+                    int texY = (int)texPos & (textures[texNum].Hight - 1);
                     texPos += step;
                     UInt32 color = textures[texNum][texX, texY];
                     ////make color darker for y-sides: R, G and B byte each divided through two with a "shift" and an "and"
@@ -473,7 +457,7 @@ namespace RaycastEngine
             //after sorting the sprites, do the projection and draw them
             for (int i = 0; i < numSprites; i++)
             {
-                sprite[i].Draw(camPos, camDir, camPlane, windowWight, windowHeight, pitch, texWidth, texHeight, buffer, ZBuffer, textures);
+                sprite[i].Draw(camPos, camDir, camPlane, windowWight, windowHeight, pitch, buffer, ZBuffer, textures);
             }
         }
 
