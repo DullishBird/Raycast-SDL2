@@ -25,7 +25,7 @@ namespace RaycastEngine
                                 "/res/pics/mossy.png", "/res/pics/wood.png", "/res/pics/colorstone.png",
                                 "/res/pics/barrel.png", "/res/pics/pillar.png", "/res/pics/greenlight.png"};
         List<Image> textures = new List<Image>();
-        
+
         public RaycastRenderer()
         {
             path = Environment.CurrentDirectory;
@@ -96,13 +96,13 @@ namespace RaycastEngine
 
             var running = true;
 
-            var windowWight = window.GetWight();
+            var windowWidth = window.GetWight();
             var windowHeight = window.GetHeight();
 
-            UInt32[] buffer = new UInt32[windowHeight * windowWight];
+            UInt32[] buffer = new UInt32[windowHeight * windowWidth];
 
             //1D Zbuffer
-            double[] ZBuffer = new double[windowWight];
+            double[] ZBuffer = new double[windowWidth];
 
             //arrays used to sort the sprites
             int[] spriteOrder = new int[numSprites];
@@ -146,7 +146,7 @@ namespace RaycastEngine
 
                                 float currentMouseSpeed = mrotSpeed * (oldMousePosX - mouseCamPosX);
                                 camera.Rotate(currentMouseSpeed);
-                                oldMousePosX = windowWight / 2;
+                                oldMousePosX = windowWidth / 2;
                                 oldMousePosY = windowHeight / 2;
 
                                 break;
@@ -204,13 +204,11 @@ namespace RaycastEngine
                     Console.WriteLine($"There was an issue with clearing the render surface. {SDL.SDL_GetError()}");
                 }
 
-                DrawMap(windowWight,
+                DrawMap(windowWidth,
                         windowHeight,
                         camera,
-                        renderer,
                         buffer,
                         ZBuffer,
-                        spriteOrder,
                         spriteDistance,
                         sprite);
 
@@ -230,9 +228,9 @@ namespace RaycastEngine
                         amask = 0x000000ff;
 
                         int depth = 4 * 8,
-                            pitch_ = windowWight * 4;
+                            pitch_ = windowWidth * 4;
 
-                        IntPtr surface = SDL.SDL_CreateRGBSurfaceFrom(bufferIntPtr, windowWight, windowHeight, depth, pitch_, rmask, gmask, bmask, amask);
+                        IntPtr surface = SDL.SDL_CreateRGBSurfaceFrom(bufferIntPtr, windowWidth, windowHeight, depth, pitch_, rmask, gmask, bmask, amask);
 
                         frameTexture = SDL.SDL_CreateTextureFromSurface(renderer, surface);
                         SDL.SDL_FreeSurface(surface);
@@ -259,7 +257,7 @@ namespace RaycastEngine
                 renderText.Draw(renderer, messageText, 0, 0);
 
                 //setting mouse position in the centre of the screen
-                SDL.SDL_WarpMouseInWindow(window.GetNative(), windowWight / 2, windowHeight / 2);
+                SDL.SDL_WarpMouseInWindow(window.GetNative(), windowWidth / 2, windowHeight / 2);
 
                 // Switches out the currently presented render surface with the one we just did work on.
                 SDL.SDL_RenderPresent(renderer);
@@ -268,14 +266,21 @@ namespace RaycastEngine
             SDL.SDL_Quit();
         }
 
-        private void DrawMap(int windowWight, int windowHeight, Camera camera, IntPtr renderer, UInt32[] buffer, double[] ZBuffer,
-                             int[] spriteOrder, double[] spriteDistance, Sprite[] sprite)
+        private void DrawMap(int windowWidth, int windowHeight, Camera camera, UInt32[] buffer, double[] ZBuffer,
+                             double[] spriteDistance, Sprite[] sprite)
+        {
+            
+            FloorCasting(windowHeight, windowWidth, camera, buffer);
+            WallCasting(windowHeight, windowWidth, camera, buffer, ZBuffer);
+            SpriteCasting(sprite, spriteDistance, windowHeight, windowWidth, camera, buffer, ZBuffer);
+        }
+
+        private void FloorCasting(int windowHeight, int windowWidth, Camera camera, UInt32[] buffer)
         {
             var camDir = camera.Dir;
             var camPos = camera.Pos;
             var camPlane = camera.Plane;
             var pitch = camera.Pitch;
-
             //FLOOR CASTING
             for (int y = 0; y < windowHeight; y++)
             {
@@ -301,14 +306,14 @@ namespace RaycastEngine
 
                 // calculate the real world step vector we have to add for each x (parallel to camera plane)
                 // adding step by step avoids multiplications with a weight in the inner loop
-                float floorStepX = rowDistance * (rayDirX1 - rayDirX0) / windowWight;
-                float floorStepY = rowDistance * (rayDirY1 - rayDirY0) / windowWight;
+                float floorStepX = rowDistance * (rayDirX1 - rayDirX0) / windowWidth;
+                float floorStepY = rowDistance * (rayDirY1 - rayDirY0) / windowWidth;
 
                 // real world coordinates of the leftmost column. This will be updated as we step to the right.
                 float floorX = camPos.X + rowDistance * rayDirX0;
                 float floorY = camPos.Y + rowDistance * rayDirY0;
 
-                for (int x = 0; x < windowWight; ++x)
+                for (int x = 0; x < windowWidth; ++x)
                 {
                     // the cell coord is simply got from the integer parts of floorX and floorY
                     int cellX = (int)(floorX);
@@ -327,14 +332,23 @@ namespace RaycastEngine
 
                     UInt32 color = textures[texureIndex][tx, ty];
                     //color = (color >> 1) & 8355711; // make a bit darker
-                    buffer[y * windowWight + x] = color;
+                    buffer[y * windowWidth + x] = color;
                 }
             }
+        }
+
+        private void WallCasting(int windowHeight, int windowWidth, Camera camera, UInt32[] buffer, double[] ZBuffer)
+        {
+            var camDir = camera.Dir;
+            var camPos = camera.Pos;
+            var camPlane = camera.Plane;
+            var pitch = camera.Pitch;
+
             //WALL CASTING
-            for (int x = 0; x < windowWight; x++)
+            for (int x = 0; x < windowWidth; x++)
             {
                 //calculate ray position and direction
-                float cameraX = 2 * x / (float)windowWight - 1; //x-coordinate in camera space
+                float cameraX = 2 * x / (float)windowWidth - 1; //x-coordinate in camera space
                 float rayCamDirX = camDir.X + camPlane.X * cameraX;
                 float rayCamDirY = camDir.Y + camPlane.Y * cameraX;
 
@@ -442,10 +456,18 @@ namespace RaycastEngine
                     ////make color darker for y-sides: R, G and B byte each divided through two with a "shift" and an "and"
                     //if (side == 1) color = (color >> 1) & 8355711;
 
-                    buffer[y * windowWight + x] = color;
+                    buffer[y * windowWidth + x] = color;
                 }
                 ZBuffer[x] = perpWallDist;
             }
+        }
+
+        private void SpriteCasting(Sprite[] sprite ,double[] spriteDistance, int windowHeight, int windowWidth, Camera camera, UInt32[] buffer, double[] ZBuffer)
+        {
+            var camDir = camera.Dir;
+            var camPos = camera.Pos;
+            var camPlane = camera.Plane;
+            var pitch = camera.Pitch;
             //SPRITE CASTING
             //sort sprites from far to close
             for (int i = 0; i < numSprites; i++)
@@ -457,11 +479,11 @@ namespace RaycastEngine
             //after sorting the sprites, do the projection and draw them
             for (int i = 0; i < numSprites; i++)
             {
-                sprite[i].Draw(camPos, camDir, camPlane, windowWight, windowHeight, pitch, buffer, ZBuffer, textures);
+                sprite[i].Draw(camPos, camDir, camPlane, windowWidth, windowHeight, pitch, buffer, ZBuffer, textures);
             }
         }
 
-        public void SortSprites(Sprite[] sprites, double[] spriteDistance)
+        private void SortSprites(Sprite[] sprites, double[] spriteDistance)
         {
             Array.Sort(spriteDistance, sprites);
             Array.Reverse(sprites);
@@ -469,3 +491,5 @@ namespace RaycastEngine
         }
     }
 }
+
+//
