@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using SDL2;
 
 namespace RaycastEngine
 {
@@ -131,5 +132,47 @@ namespace RaycastEngine
             }
         }
         // сделать гетсет для texture, в клиенте цикл(все колонны прозрачные на 0,5
+
+        public SDL.SDL_Rect GetSpriteIntersectionArea(Vector3 camPos, Vector2 camDir, Vector2 camPlane, int windowWight,
+                         int windowHeight, float pitch, SDL.SDL_Rect crosshair)
+        {
+            double spriteX = position.X - camPos.X;
+            double spriteY = position.Y - camPos.Y;
+
+            double invDet = 1.0 / (camPlane.X * camDir.Y - camDir.X * camPlane.Y); //required for correct matrix multiplication
+
+            double transformX = invDet * (camDir.Y * spriteX - camDir.X * spriteY);
+            double transformY = invDet * (-camPlane.Y * spriteX + camPlane.X * spriteY); //this is actually the depth inside the screen, that what Z is in 3D
+
+            int spriteScreenX = (int)((windowWight / 2) * (1 + transformX / transformY));
+
+            int vMoveScreen = (int)((vMove / transformY) + pitch + camPos.Z / transformY);
+            //calculate height of the sprite on screen
+            int spriteHeight = Math.Abs((int)(windowHeight / (transformY))) / vDiv;
+            //calculate width of the sprite
+            int spriteWidth = Math.Abs((int)(windowHeight / (transformY))) / uDiv;
+            
+            var rect = new SDL.SDL_Rect
+            {
+                x = -spriteWidth / 2 + spriteScreenX,
+                y = -spriteHeight / 2 + windowHeight / 2 + vMoveScreen,
+                w = spriteWidth,
+                h = spriteHeight
+            };
+
+            var intersect = SDL.SDL_IntersectRect(ref crosshair, ref rect, out SDL.SDL_Rect result);
+            
+            if (intersect == SDL.SDL_bool.SDL_FALSE)
+            {
+                return new SDL.SDL_Rect 
+                { 
+                    x = 0, 
+                    y = 0,
+                              w = 0,
+                                          h = 0 
+                };
+            }
+            return result;
+        }
     }
 }

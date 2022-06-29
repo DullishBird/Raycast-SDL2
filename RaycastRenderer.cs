@@ -133,7 +133,7 @@ namespace RaycastEngine
                         case SDL.SDL_EventType.SDL_QUIT:
                             running = false;
                             break;
-
+                                                
                         case SDL.SDL_EventType.SDL_MOUSEMOTION:
                             {
                                 int mouseCamPosX = e.motion.x;
@@ -152,8 +152,16 @@ namespace RaycastEngine
                                 break;
                             }
                     }
-
+                    if (SDL.SDL_EventType.SDL_MOUSEBUTTONDOWN == e.type)
+                    {
+                        if (SDL.SDL_BUTTON_LEFT == e.button.button)
+                        {
+                            //AABB(renderer);
+                            //Console.WriteLine("Left mouse button is down");
+                        }
+                    }
                 }
+                
                 IntPtr keysPtr = SDL.SDL_GetKeyboardState(out int numkeys);
                 byte[] keyState = new byte[numkeys];
                 Marshal.Copy(keysPtr, keyState, 0, numkeys);
@@ -203,7 +211,7 @@ namespace RaycastEngine
                 {
                     Console.WriteLine($"There was an issue with clearing the render surface. {SDL.SDL_GetError()}");
                 }
-
+                
                 DrawMap(windowWidth,
                         windowHeight,
                         camera,
@@ -211,7 +219,7 @@ namespace RaycastEngine
                         ZBuffer,
                         spriteDistance,
                         sprite);
-
+                
                 IntPtr frameTexture = IntPtr.Zero;
 
                 //Now render to the texture
@@ -243,7 +251,7 @@ namespace RaycastEngine
                 {
                     Console.WriteLine($"There was an issue with SDL_RenderCopyEx. {SDL.SDL_GetError()}");
                 };
-
+                CheckSpritesIntersection(renderer, sprite);
                 SDL.SDL_DestroyTexture(frameTexture);
                 for (int i = 0; i < buffer.Length; i++) buffer[i] = 0; //clear the buffer instead of cls()
 
@@ -489,7 +497,29 @@ namespace RaycastEngine
             Array.Reverse(sprites);
             Array.Reverse(spriteDistance);
         }
+
+        private void CheckSpritesIntersection(IntPtr renderer, Sprite[] sprites)
+        {
+            var rect = new SDL.SDL_Rect
+            {
+                x = window.GetWight() / 2 - 25,
+                y = window.GetHeight() / 2 - 25,
+                w = 50,
+                h = 50
+            };
+            
+            SDL.SDL_RenderDrawRect(renderer, ref rect);
+
+            foreach (var sprite in sprites)
+            {
+                SDL.SDL_Rect result = sprite.GetSpriteIntersectionArea(camera.Pos, camera.Dir, camera.Plane, window.GetWight(),
+                         window.GetHeight(), camera.Pitch, rect);
+                if (result.h != 0 && result.w != 0)
+                {
+                    Console.WriteLine($"x:{result.x}, y: {result.y}");
+                    SDL.SDL_RenderDrawRect(renderer, ref result);
+                }
+            }
+        }
     }
 }
-
-//
